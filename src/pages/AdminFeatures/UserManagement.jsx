@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../supabaseClient";
 
 export default function UserManagement() {
     const navigate = useNavigate();
@@ -88,10 +88,11 @@ export default function UserManagement() {
         // NOTE: assumes the row's primary key ("id") matches the auth user's id.
         // Change "id" to "user_id" here if that's how your schema links them.
         const { error: insertError } = await supabase.from(table).insert({
-            id: newUserId,
-            name: form.name,
-            status: "Pending",
-        });
+    id: newUserId,
+    name: form.name,
+    email: form.email,
+    status: "Pending",
+});
 
         // Restore the admin's session regardless of whether the insert succeeded,
         // so the admin isn't accidentally left logged in as the new user.
