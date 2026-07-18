@@ -64,7 +64,32 @@ export default function AdminDashboard() {
       <div style={s.body}>
 
   {/* Admin Management Buttons */}
-  <div style={s.adminMenu}>
+  <div style={s.dashboardLayout}>
+
+  {/* Main Dashboard Content */}
+  <div style={s.mainContent}>
+
+    {/* Stats grid */}
+    <div style={s.grid}>
+      ...
+    </div>
+
+    {/* Today's pairs */}
+    ...
+    
+    {/* Impact card */}
+    ...
+
+  </div>
+
+
+  {/* Right Side Admin Menu */}
+  <div style={s.adminSidebar}>
+
+    <h3 style={s.sidebarTitle}>
+      Admin Tools
+    </h3>
+
 
     <button
       onClick={() => navigate("/admin/users")}
@@ -85,16 +110,18 @@ export default function AdminDashboard() {
     <button
       onClick={() => navigate("/admin/map")}
       style={s.adminButton}
-    > 
+    >
       Donation Heat Map
     </button>
+
 
     <button
       onClick={() => navigate("/admin/audit")}
       style={s.adminButton}
-    >   
+    >
       Audit Log
     </button>
+
 
     <button
       onClick={() => navigate("/admin/analytics")}
@@ -104,6 +131,8 @@ export default function AdminDashboard() {
     </button>
 
   </div>
+
+</div>
 
 
   {/* Stats grid */}
@@ -158,30 +187,183 @@ export default function AdminDashboard() {
 }
 
 const s = {
-  page: { minHeight: '100vh', background: '#F4F8F4', fontFamily: 'system-ui, sans-serif' },
 
-  adminMenu: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-    marginBottom: 20,
-  },
 
-  adminButton: {
-    background: '#2C5F2D',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    padding: '12px',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
+page:{
+  minHeight:'100vh',
+  background:'#F4F8F4',
+  fontFamily:'system-ui,sans-serif'
+},
 
-  loading: { 
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    color: '#6B7280'
-  },
+
+header:{
+  background:'#2C5F2D',
+  padding:'14px 20px',
+  display:'flex',
+  justifyContent:'space-between',
+  alignItems:'center'
+},
+
+
+headerSub:{
+  fontSize:10,
+  color:'rgba(255,255,255,.65)'
+},
+
+
+headerTitle:{
+  fontSize:16,
+  fontWeight:700,
+  color:'#fff'
+},
+
+
+badge:{
+  background:'rgba(255,255,255,.18)',
+  borderRadius:20,
+  padding:'3px 10px',
+  color:'#fff',
+  fontSize:11
+},
+
+
+signOut:{
+  background:'none',
+  border:'1px solid rgba(255,255,255,.4)',
+  color:'#fff',
+  borderRadius:8,
+  padding:'5px 12px'
+},
+
+
+body:{
+  padding:'16px',
+  maxWidth:'1200px',
+  margin:'0 auto'
+},
+
+
+dashboardLayout:{
+  display:'flex',
+  gap:20,
+  alignItems:'flex-start'
+},
+
+
+mainContent:{
+  flex:1
+},
+
+
+adminSidebar:{
+  width:220,
+  background:'#fff',
+  padding:15,
+  borderRadius:12,
+  boxShadow:'0 1px 4px rgba(0,0,0,.07)'
+},
+
+
+sidebarTitle:{
+  fontWeight:700,
+  marginBottom:15,
+  color:'#2C5F2D'
+},
+
+
+adminButton:{
+  width:'100%',
+  background:'#2C5F2D',
+  color:'#fff',
+  border:'none',
+  borderRadius:10,
+  padding:12,
+  marginBottom:10,
+  cursor:'pointer'
+},
+
+
+grid:{
+  display:'grid',
+  gridTemplateColumns:'1fr 1fr',
+  gap:10,
+  marginBottom:20
+},
+
+
+statCard:{
+  background:'#fff',
+  padding:14,
+  borderRadius:12
+},
+
+
+sectionLabel:{
+  fontSize:11,
+  fontWeight:600,
+  marginBottom:10
+},
+
+
+pairRow:{
+  background:'#fff',
+  padding:12,
+  borderRadius:12,
+  marginBottom:8,
+  display:'flex',
+  justifyContent:'space-between'
+},
+
+
+pairName:{
+  fontWeight:500
+},
+
+
+pairSub:{
+  fontSize:11,
+  color:'#6B7280'
+},
+
+
+impactCard:{
+  background:'#EBF5EB',
+  padding:14,
+  borderRadius:12,
+  marginTop:16
+},
+
+
+badgeGreen:{
+  background:'#F0FDF4',
+  color:'#166534',
+  padding:'3px 8px',
+  borderRadius:20
+},
+
+
+badgeAmber:{
+  background:'#FFFBEB',
+  color:'#B45309',
+  padding:'3px 8px',
+  borderRadius:20
+},
+
+
+badgeRed:{
+  background:'#FEF2F2',
+  color:'#991B1B',
+  padding:'3px 8px',
+  borderRadius:20
+},
+
+
+loading:{
+  height:'100vh',
+  display:'flex',
+  alignItems:'center',
+  justifyContent:'center'
+}
+
+
+}
