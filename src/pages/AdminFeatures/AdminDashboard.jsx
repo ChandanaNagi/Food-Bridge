@@ -34,6 +34,7 @@ export default function AdminDashboard() {
     setLoading(false)
   }
 
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/')
@@ -61,27 +62,52 @@ export default function AdminDashboard() {
       </div>
 
       <div style={s.body}>
-        {/* Admin Management Buttons */}
-        <div style={s.adminMenu}>
-          <button onClick={() => navigate('/admin/users')} style={s.adminButton}>
-            User Management
-          </button>
-          <button onClick={() => navigate('/admin/strikes')} style={s.adminButton}>
-            Strike Management
-          </button>
-          <button onClick={() => navigate('/admin/map')} style={s.adminButton}>
-            Donation Heat Map
-          </button>
-          <button onClick={() => navigate('/admin/audit')} style={s.adminButton}>
-            Audit Log
-          </button>
-          <button onClick={() => navigate('/admin/analytics')} style={s.adminButton}>
-            Analytics
-          </button>
-        </div>
 
-        {/* Stats grid */}
-        <div style={s.grid}>
+  {/* Admin Management Buttons */}
+  <div style={s.adminMenu}>
+
+    <button
+      onClick={() => navigate("/admin/users")}
+      style={s.adminButton}
+    >
+      User Management
+    </button>
+
+
+    <button
+      onClick={() => navigate("/admin/strikes")}
+      style={s.adminButton}
+    >
+      Strike Management
+    </button>
+
+
+    <button
+      onClick={() => navigate("/admin/map")}
+      style={s.adminButton}
+    > 
+      Donation Heat Map
+    </button>
+
+    <button
+      onClick={() => navigate("/admin/audit")}
+      style={s.adminButton}
+    >   
+      Audit Log
+    </button>
+
+    <button
+      onClick={() => navigate("/admin/analytics")}
+      style={s.adminButton}
+    >
+      Analytics
+    </button>
+
+  </div>
+
+
+  {/* Stats grid */}
+  <div style={s.grid}>
           {[
             { label: 'Active pairs', value: stats.total, sub: 'Today' },
             { label: 'Confirmed', value: stats.confirmed, sub: 'Today', color: '#166534' },
@@ -133,23 +159,29 @@ export default function AdminDashboard() {
 
 const s = {
   page: { minHeight: '100vh', background: '#F4F8F4', fontFamily: 'system-ui, sans-serif' },
-  loading: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#6B7280' },
-  header: { background: '#2C5F2D', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.65)', marginBottom: 2 },
-  headerTitle: { fontSize: 16, fontWeight: 700, color: '#fff' },
-  badge: { background: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#fff' },
-  signOut: { background: 'none', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#fff', cursor: 'pointer' },
-  body: { padding: '16px', maxWidth: 480, margin: '0 auto' },
-  adminMenu: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 },
-  adminButton: { background: '#2C5F2D', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 },
-  statCard: { background: '#fff', borderRadius: 12, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', textAlign: 'center' },
-  sectionLabel: { fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 },
-  pairRow: { background: '#fff', borderRadius: 12, padding: '11px 13px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  pairName: { fontSize: 13, fontWeight: 500, color: '#111827' },
-  pairSub: { fontSize: 11, color: '#6B7280' },
-  impactCard: { background: '#EBF5EB', borderRadius: 12, padding: 14, marginTop: 16 },
-  badgeGreen: { background: '#F0FDF4', color: '#166534', border: '1px solid #86EFAC', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
-  badgeAmber: { background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
-  badgeRed: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
-}
+
+  adminMenu: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    marginBottom: 20,
+  },
+
+  adminButton: {
+    background: '#2C5F2D',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 10,
+    padding: '12px',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+
+  loading: { 
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    color: '#6B7280'
+  },

@@ -5,6 +5,11 @@ import PostSurplus from './pages/PostSurplus'
 import ShelterDashboard from './pages/ShelterDashboard'
 import DonationDetail from './pages/DonationDetail'
 import AdminDashboard from './pages/AdminDashboard'
+import Analytics from './pages/AdminFeatures/Analytics'
+import AuditLog from './pages/AdminFeatures/AuditLog'
+import DonationHeatMap from './pages/AdminFeatures/DonationHeatMap'
+import StrikeManagement from './pages/AdminFeatures/StrikeManagement'
+import UserManagement from './pages/AdminFeatures/UserManagement'
 
 function App() {
   return (
@@ -16,6 +21,11 @@ function App() {
         <Route path="/shelter" element={<ShelterDashboard />} />
         <Route path="/shelter/donation/:id" element={<DonationDetail />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<UserManagement />} />
+        <Route path="/admin/strikes" element={<StrikeManagement />} />
+        <Route path="/admin/map" element={<DonationHeatMap />} />
+        <Route path="/admin/audit" element={<AuditLog />} />
+        <Route path="/admin/analytics" element={<Analytics />} />
       </Routes>
     </Router>
   )
