@@ -29,7 +29,7 @@ export default function ShelterDashboard() {
         .select('*, restaurants(*)')
         .eq('shelter_id', shelt.id)
         .eq('assignment_date', today)
-        .single()
+        .maybeSingle()
       setAssignment(assign)
 
       if (assign) {

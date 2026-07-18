@@ -22,7 +22,7 @@ export default function RestaurantDashboard() {
       .from('restaurants')
       .select('*')
       .eq('email', user.email)
-      .single()
+      .maybeSingle()
     setRestaurant(rest)
 
     if (rest) {
