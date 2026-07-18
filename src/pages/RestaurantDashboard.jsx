@@ -9,6 +9,7 @@ export default function RestaurantDashboard() {
   const [donation, setDonation] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [completing, setCompleting] = useState(false)
 
   useEffect(() => {
     loadDashboard()
@@ -32,7 +33,7 @@ export default function RestaurantDashboard() {
         .select('*, shelters(*)')
         .eq('restaurant_id', rest.id)
         .eq('assignment_date', today)
-        .single()
+        .maybeSingle()
       setAssignment(assign)
 
       if (assign) {
@@ -40,7 +41,7 @@ export default function RestaurantDashboard() {
           .from('donations')
           .select('*')
           .eq('assignment_id', assign.id)
-          .single()
+          .maybeSingle()
         setDonation(don)
       }
 
@@ -53,6 +54,17 @@ export default function RestaurantDashboard() {
       setHistory(hist || [])
     }
     setLoading(false)
+  }
+
+  const handleMarkComplete = async () => {
+    if (!donation) return
+    setCompleting(true)
+    await supabase
+      .from('donations')
+      .update({ status: 'completed', handoff_completed_at: new Date().toISOString() })
+      .eq('id', donation.id)
+    await loadDashboard()
+    setCompleting(false)
   }
 
   const handleSignOut = async () => {
@@ -83,10 +95,12 @@ export default function RestaurantDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={s.shelterName}>{assignment.shelters?.name || 'Assigned Shelter'}</div>
-                <div style={s.shelterSub}>Pickup window: 5:00–7:00 PM</div>
+                <div style={s.shelterSub}>
+                  {donation?.pickup_window ? `Pickup window: ${donation.pickup_window}` : 'Pickup window: TBD'}
+                </div>
               </div>
               <span style={donation ? s.badgeGreen : s.badgeAmber}>
-                {donation ? 'Posted' : 'Pending'}
+                {donation ? statusLabel(donation.status) : 'Pending'}
               </span>
             </div>
           ) : (
@@ -94,13 +108,42 @@ export default function RestaurantDashboard() {
           )}
         </div>
 
+        {/* Donation details, once posted */}
+        {donation && (
+          <div style={s.card}>
+            <div style={s.sectionLabel}>Donation Details</div>
+            <DetailRow label="Items" value={donation.food_items} />
+            <DetailRow label="Quantity" value={`${donation.quantity} portions`} />
+            <DetailRow label="Prepared" value={donation.prepared_time || '—'} />
+            <DetailRow label="Safe until" value={donation.safe_until || '—'} />
+            <DetailRow label="Temperature" value={donation.temperature_requirement || '—'} />
+            <DetailRow label="Allergens" value={donation.allergen_notes || '—'} />
+          </div>
+        )}
+
         {/* Action Button */}
         {assignment && !donation && (
           <button style={s.btn} onClick={() => navigate('/restaurant/post')}>
             Post Today's Surplus
           </button>
         )}
-        {donation && (
+
+        {donation && donation.status !== 'completed' && (
+          <button style={s.btn} onClick={handleMarkComplete} disabled={completing}>
+            {completing ? 'Marking complete...' : 'Mark Handoff Complete'}
+          </button>
+        )}
+
+        {donation && donation.status === 'completed' && (
+          <div style={{ ...s.card, background: '#F0FDF4', border: '1px solid #86EFAC' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>Handoff complete</div>
+            <div style={{ fontSize: 12, color: '#166534', marginTop: 3, opacity: 0.85 }}>
+              Completed at {new Date(donation.handoff_completed_at).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
+
+        {donation && donation.status === 'posted' && (
           <div style={{ ...s.card, background: '#F0FDF4', border: '1px solid #86EFAC' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>Donation posted</div>
             <div style={{ fontSize: 12, color: '#166534', marginTop: 3, opacity: 0.85 }}>
@@ -109,9 +152,9 @@ export default function RestaurantDashboard() {
           </div>
         )}
 
-        {/* Recent History */}
+        {/* Recent History / Past Assignments */}
         <div style={{ marginTop: 20 }}>
-          <div style={s.sectionLabel}>Recent Donations</div>
+          <div style={s.sectionLabel}>Recent Assignments</div>
           {history.length === 0 ? (
             <div style={{ color: '#6B7280', fontSize: 13 }}>No donations yet.</div>
           ) : (
@@ -121,14 +164,33 @@ export default function RestaurantDashboard() {
                   <div style={s.historyName}>{h.assignments?.shelters?.name || 'Shelter'}</div>
                   <div style={s.historySub}>{h.assignments?.assignment_date} · {h.quantity} portions</div>
                 </div>
-                <span style={h.status === 'confirmed' ? s.badgeGreen : s.badgeAmber}>
-                  {h.status}
+                <span style={h.status === 'completed' || h.status === 'confirmed' ? s.badgeGreen : s.badgeAmber}>
+                  {statusLabel(h.status)}
                 </span>
               </div>
             ))
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function statusLabel(status) {
+  const map = {
+    posted: 'Posted',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    declined: 'Declined',
+  }
+  return map[status] || status
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 13 }}>
+      <span style={{ color: '#6B7280' }}>{label}</span>
+      <span style={{ color: '#111827', fontWeight: 500, textAlign: 'right', maxWidth: '65%' }}>{value}</span>
     </div>
   )
 }
