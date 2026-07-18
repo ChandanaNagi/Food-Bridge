@@ -237,6 +237,7 @@ export default function ShelterDashboard() {
                 <div style={s.restaurantName}>{assignment.restaurants?.name}</div>
                 {assignment.restaurants?.address && (
                   
+                    <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(assignment.restaurants.address)}`}
                     target="_blank"
                     rel="noreferrer"
