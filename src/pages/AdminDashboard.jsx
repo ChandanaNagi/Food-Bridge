@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -16,11 +16,24 @@ export default function AdminDashboard() {
 
   const [pairs, setPairs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
 
 
 
   useEffect(() => {
     loadDashboard()
+  }, [])
+
+  // Close the dropdown if the user clicks anywhere outside of it
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
 
@@ -121,6 +134,11 @@ export default function AdminDashboard() {
 
   }
 
+  const goTo = (path) => {
+    setMenuOpen(false)
+    navigate(path)
+  }
+
 
 
 
@@ -168,6 +186,60 @@ return(
     </div>
 
 
+    {/* Admin Tools dropdown */}
+    <div style={s.menuWrapper} ref={menuRef}>
+
+      <button
+        onClick={() => setMenuOpen(open => !open)}
+        style={s.menuButton}
+      >
+        Admin Tools {menuOpen ? '▲' : '▼'}
+      </button>
+
+      {menuOpen && (
+        <div style={s.dropdown}>
+
+          <button
+            onClick={() => goTo('/admin/users')}
+            style={s.dropdownItem}
+          >
+            User Management
+          </button>
+
+          <button
+            onClick={() => goTo('/admin/strikes')}
+            style={s.dropdownItem}
+          >
+            Strike Management
+          </button>
+
+          <button
+            onClick={() => goTo('/admin/map')}
+            style={s.dropdownItem}
+          >
+            Donation Heat Map
+          </button>
+
+          <button
+            onClick={() => goTo('/admin/audit')}
+            style={s.dropdownItem}
+          >
+            Audit Log
+          </button>
+
+          <button
+            onClick={() => goTo('/admin/analytics')}
+            style={s.dropdownItem}
+          >
+            Analytics
+          </button>
+
+        </div>
+      )}
+
+    </div>
+
+
     <button
       onClick={handleSignOut}
       style={s.signOut}
@@ -187,14 +259,6 @@ return(
 {/* BODY */}
 
 <div style={s.body}>
-
-
-<div style={s.dashboardLayout}>
-
-
-{/* LEFT DASHBOARD */}
-
-<div style={s.mainContent}>
 
 
 {/* STATS */}
@@ -394,76 +458,6 @@ stats.total > 0
 </div>
 
 
-
-
-
-
-
-{/* RIGHT ADMIN MENU */}
-
-<div style={s.adminSidebar}>
-
-
-<h3 style={s.sidebarTitle}>
-Admin Tools
-</h3>
-
-
-
-<button
-onClick={()=>navigate("/admin/users")}
-style={s.adminButton}
->
-User Management
-</button>
-
-
-
-<button
-onClick={()=>navigate("/admin/strikes")}
-style={s.adminButton}
->
-Strike Management
-</button>
-
-
-
-<button
-onClick={()=>navigate("/admin/map")}
-style={s.adminButton}
->
-Donation Heat Map
-</button>
-
-
-
-<button
-onClick={()=>navigate("/admin/audit")}
-style={s.adminButton}
->
-Audit Log
-</button>
-
-
-
-<button
-onClick={()=>navigate("/admin/analytics")}
-style={s.adminButton}
->
-Analytics
-</button>
-
-
-
-</div>
-
-
-
-</div>
-
-</div>
-
-
 </div>
 
 )
@@ -540,58 +534,60 @@ cursor:"pointer"
 
 
 
-body:{
-padding:20,
-maxWidth:1400,
-margin:"0 auto"
+menuWrapper:{
+position:"relative"
 },
 
 
 
-dashboardLayout:{
-display:"grid",
-gridTemplateColumns:"1fr 240px",
-gap:25,
-alignItems:"start"
+menuButton:{
+background:"rgba(255,255,255,.15)",
+border:"1px solid rgba(255,255,255,.4)",
+color:"#fff",
+borderRadius:8,
+padding:"6px 14px",
+cursor:"pointer",
+fontSize:13,
+fontWeight:600
 },
 
 
 
-mainContent:{
-width:"100%"
-},
-
-
-
-adminSidebar:{
+dropdown:{
+position:"absolute",
+top:"calc(100% + 8px)",
+right:0,
 background:"#fff",
-padding:15,
-borderRadius:12,
-boxShadow:"0 1px 4px rgba(0,0,0,.07)",
-position:"sticky",
-top:20
+borderRadius:10,
+boxShadow:"0 4px 16px rgba(0,0,0,.15)",
+padding:8,
+display:"flex",
+flexDirection:"column",
+gap:6,
+width:200,
+zIndex:50
 },
 
 
 
-sidebarTitle:{
-color:"#2C5F2D",
-fontWeight:700,
-marginBottom:15
-},
-
-
-
-adminButton:{
-width:"100%",
+dropdownItem:{
 background:"#2C5F2D",
 color:"#fff",
 border:"none",
-borderRadius:10,
-padding:12,
-marginBottom:10,
+borderRadius:8,
+padding:"10px 12px",
 cursor:"pointer",
-fontSize:13
+fontSize:13,
+fontWeight:600,
+textAlign:"left"
+},
+
+
+
+body:{
+padding:20,
+maxWidth:900,
+margin:"0 auto"
 },
 
 
