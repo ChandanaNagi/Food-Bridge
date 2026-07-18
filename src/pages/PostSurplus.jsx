@@ -5,7 +5,8 @@ import { supabase } from '../supabaseClient'
 export default function PostSurplus() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
-    food_items: '', quantity: '', pickup_window: '', allergen_notes: '', safe_until: ''
+    food_items: '', quantity: '', pickup_window: '', allergen_notes: '', safe_until: '',
+    prepared_time: '', temperature_requirement: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -51,6 +52,8 @@ export default function PostSurplus() {
       pickup_window: form.pickup_window,
       allergen_notes: form.allergen_notes,
       safe_until: form.safe_until || null,
+      prepared_time: form.prepared_time || null,
+      temperature_requirement: form.temperature_requirement || null,
       status: 'posted',
     })
 
@@ -80,7 +83,9 @@ export default function PostSurplus() {
         <Field label="Food items *" value={form.food_items} onChange={set('food_items')} placeholder="e.g. Grilled chicken, rice, salad" />
         <Field label="Quantity (portions) *" value={form.quantity} onChange={set('quantity')} placeholder="e.g. 35" type="number" />
         <Field label="Pickup window *" value={form.pickup_window} onChange={set('pickup_window')} placeholder="e.g. 5:00–7:00 PM" />
-        <Field label="Safe until" value={form.safe_until} onChange={set('safe_until')} placeholder="e.g. 9:00 PM" />
+        <Field label="Prepared time" value={form.prepared_time} onChange={set('prepared_time')} placeholder="e.g. 3:30 PM" />
+        <Field label="Safe until (expiration)" value={form.safe_until} onChange={set('safe_until')} placeholder="e.g. 9:00 PM" />
+        <Field label="Temperature requirement" value={form.temperature_requirement} onChange={set('temperature_requirement')} placeholder="e.g. Hot — keep above 140°F, Refrigerated, Room temp OK" />
         <Field label="Allergen notes" value={form.allergen_notes} onChange={set('allergen_notes')} placeholder="e.g. Nut-free, gluten-free" />
 
         <button onClick={handleSubmit} style={s.btn} disabled={loading}>
