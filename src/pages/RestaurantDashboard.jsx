@@ -37,12 +37,15 @@ export default function RestaurantDashboard() {
       setAssignment(assign)
 
       if (assign) {
-        const { data: don } = await supabase
+        // Fetch the MOST RECENT donation for this assignment, not just "a" donation.
+        // This handles the case where a donation was declined and a new one was posted.
+        const { data: donRows } = await supabase
           .from('donations')
           .select('*')
           .eq('assignment_id', assign.id)
-          .maybeSingle()
-        setDonation(don)
+          .order('posted_at', { ascending: false })
+          .limit(1)
+        setDonation(donRows && donRows.length > 0 ? donRows[0] : null)
       }
 
       const { data: hist } = await supabase
@@ -74,6 +77,9 @@ export default function RestaurantDashboard() {
 
   if (loading) return <div style={s.loading}>Loading...</div>
 
+  const canPostSurplus = assignment && (!donation || donation.status === 'declined')
+  const showDonationCard = donation && donation.status !== 'declined'
+
   return (
     <div style={s.page}>
       <div style={s.header}>
@@ -99,7 +105,7 @@ export default function RestaurantDashboard() {
                   {donation?.pickup_window ? `Pickup window: ${donation.pickup_window}` : 'Pickup window: TBD'}
                 </div>
               </div>
-              <span style={donation ? s.badgeGreen : s.badgeAmber}>
+              <span style={badgeStyle(donation?.status)}>
                 {donation ? statusLabel(donation.status) : 'Pending'}
               </span>
             </div>
@@ -108,8 +114,19 @@ export default function RestaurantDashboard() {
           )}
         </div>
 
-        {/* Donation details, once posted */}
-        {donation && (
+        {/* Declined notice, with option to repost */}
+        {donation && donation.status === 'declined' && (
+          <div style={{ ...s.card, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#991B1B' }}>Donation declined</div>
+            <div style={{ fontSize: 12, color: '#991B1B', marginTop: 3, opacity: 0.85 }}>
+              {assignment?.shelters?.name} declined this donation
+              {donation.decline_reason ? ` — ${donation.decline_reason}` : ''}. You can post a new surplus below.
+            </div>
+          </div>
+        )}
+
+        {/* Donation details, once posted and not declined */}
+        {showDonationCard && (
           <div style={s.card}>
             <div style={s.sectionLabel}>Donation Details</div>
             <DetailRow label="Items" value={donation.food_items} />
@@ -122,19 +139,19 @@ export default function RestaurantDashboard() {
         )}
 
         {/* Action Button */}
-        {assignment && !donation && (
+        {canPostSurplus && (
           <button style={s.btn} onClick={() => navigate('/restaurant/post')}>
             Post Today's Surplus
           </button>
         )}
 
-        {donation && donation.status !== 'completed' && (
+        {showDonationCard && donation.status !== 'completed' && (
           <button style={s.btn} onClick={handleMarkComplete} disabled={completing}>
             {completing ? 'Marking complete...' : 'Mark Handoff Complete'}
           </button>
         )}
 
-        {donation && donation.status === 'completed' && (
+        {showDonationCard && donation.status === 'completed' && (
           <div style={{ ...s.card, background: '#F0FDF4', border: '1px solid #86EFAC' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>Handoff complete</div>
             <div style={{ fontSize: 12, color: '#166534', marginTop: 3, opacity: 0.85 }}>
@@ -143,7 +160,7 @@ export default function RestaurantDashboard() {
           </div>
         )}
 
-        {donation && donation.status === 'posted' && (
+        {showDonationCard && donation.status === 'posted' && (
           <div style={{ ...s.card, background: '#F0FDF4', border: '1px solid #86EFAC' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>Donation posted</div>
             <div style={{ fontSize: 12, color: '#166534', marginTop: 3, opacity: 0.85 }}>
@@ -164,7 +181,7 @@ export default function RestaurantDashboard() {
                   <div style={s.historyName}>{h.assignments?.shelters?.name || 'Shelter'}</div>
                   <div style={s.historySub}>{h.assignments?.assignment_date} · {h.quantity} portions</div>
                 </div>
-                <span style={h.status === 'completed' || h.status === 'confirmed' ? s.badgeGreen : s.badgeAmber}>
+                <span style={badgeStyle(h.status)}>
                   {statusLabel(h.status)}
                 </span>
               </div>
@@ -184,6 +201,12 @@ function statusLabel(status) {
     declined: 'Declined',
   }
   return map[status] || status
+}
+
+function badgeStyle(status) {
+  if (status === 'completed' || status === 'confirmed') return s.badgeGreen
+  if (status === 'declined') return s.badgeRed
+  return s.badgeAmber
 }
 
 function DetailRow({ label, value }) {
@@ -214,4 +237,5 @@ const s = {
   historySub: { fontSize: 11, color: '#6B7280' },
   badgeGreen: { background: '#F0FDF4', color: '#166534', border: '1px solid #86EFAC', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
   badgeAmber: { background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
+  badgeRed: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA', borderRadius: 20, padding: '2px 9px', fontSize: 11, fontWeight: 600 },
 }
