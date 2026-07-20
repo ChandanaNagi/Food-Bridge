@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../supabaseClient";
 
 export default function UserManagement() {
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [updatingId, setUpdatingId] = useState(null);
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [adding, setAdding] = useState(false);
@@ -26,8 +27,6 @@ export default function UserManagement() {
     const loadUsers = async () => {
         setLoading(true);
 
-        // NOTE: assumes tables named "restaurants" and "shelters" with at
-        // least "id", "name", and "status" columns. Adjust if yours differ.
         const { data: restaurants } = await supabase.from("restaurants").select("*");
         const { data: shelters } = await supabase.from("shelters").select("*");
 
@@ -38,6 +37,24 @@ export default function UserManagement() {
 
         setUsers(combined);
         setLoading(false);
+    };
+
+    const handleStatusChange = async (user, newStatus) => {
+        setUpdatingId(user.id);
+
+        const table = user.type === "Restaurant" ? "restaurants" : "shelters";
+
+        const { error: updateError } = await supabase
+            .from(table)
+            .update({ status: newStatus })
+            .eq("id", user.id);
+
+        if (updateError) {
+            alert(`Failed to update status: ${updateError.message}`);
+        }
+
+        await loadUsers();
+        setUpdatingId(null);
     };
 
     const handleAddUser = async (e) => {
@@ -56,9 +73,6 @@ export default function UserManagement() {
 
         setAdding(true);
 
-        // Keep a copy of the admin's current session. Calling supabase.auth.signUp()
-        // from the browser logs THIS TAB into the newly created account, so we
-        // restore the admin session again right after.
         const { data: { session: adminSession } } = await supabase.auth.getSession();
 
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -85,17 +99,13 @@ export default function UserManagement() {
 
         const table = form.type === "Restaurant" ? "restaurants" : "shelters";
 
-        // NOTE: assumes the row's primary key ("id") matches the auth user's id.
-        // Change "id" to "user_id" here if that's how your schema links them.
         const { error: insertError } = await supabase.from(table).insert({
-    id: newUserId,
-    name: form.name,
-    email: form.email,
-    status: "Pending",
-});
+            id: newUserId,
+            name: form.name,
+            email: form.email,
+            status: "Pending",
+        });
 
-        // Restore the admin's session regardless of whether the insert succeeded,
-        // so the admin isn't accidentally left logged in as the new user.
         if (adminSession) {
             await supabase.auth.setSession({
                 access_token: adminSession.access_token,
@@ -232,17 +242,26 @@ export default function UserManagement() {
 
                                 <td>
 
-                                    <button>
+                                    <button
+                                        onClick={() => handleStatusChange(user, "Approved")}
+                                        disabled={updatingId === user.id || user.status === "Approved"}
+                                    >
                                         Approve
                                     </button>
 
 
-                                    <button>
+                                    <button
+                                        onClick={() => handleStatusChange(user, "Suspended")}
+                                        disabled={updatingId === user.id || user.status === "Suspended"}
+                                    >
                                         Suspend
                                     </button>
 
 
-                                    <button>
+                                    <button
+                                        onClick={() => handleStatusChange(user, "Approved")}
+                                        disabled={updatingId === user.id || user.status !== "Suspended"}
+                                    >
                                         Reactivate
                                     </button>
 
