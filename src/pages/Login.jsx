@@ -47,16 +47,16 @@ export default function Login() {
     // NOTE: assumes "restaurants" / "shelters" tables keyed by "id" = auth user id,
     // with a "status" column. Adjust to match your schema if it differs.
     const { data: shelterRow } = await supabase
-      .from("shelters")
-      .select("status")
-      .eq("id", userId)
-      .maybeSingle();
+  .from("shelters")
+  .select("status")
+  .eq("email", loginForm.email)
+  .maybeSingle();
 
-    const { data: restaurantRow } = await supabase
-      .from("restaurants")
-      .select("status")
-      .eq("id", userId)
-      .maybeSingle();
+const { data: restaurantRow } = await supabase
+  .from("restaurants")
+  .select("status")
+  .eq("email", loginForm.email)
+  .maybeSingle();
 
     const matchedRow = shelterRow || restaurantRow;
 
