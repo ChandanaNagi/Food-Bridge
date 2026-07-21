@@ -38,23 +38,33 @@ export default function UserManagement() {
         setLoading(false);
     };
 
-    const handleStatusChange = async (user, newStatus) => {
-        setUpdatingId(user.id);
+     const handleStatusChange = async (user, newStatus) => {
+    setUpdatingId(user.id);
 
-        const table = user.type === "Restaurant" ? "restaurants" : "shelters";
+    const table = user.type === "Restaurant" ? "restaurants" : "shelters";
 
-        const { error: updateError } = await supabase
-            .from(table)
-            .update({ status: newStatus })
-            .eq("id", user.id);
+    const { error: updateError } = await supabase
+        .from(table)
+        .update({ status: newStatus })
+        .eq("id", user.id);
 
-        if (updateError) {
-            alert(`Failed to update status: ${updateError.message}`);
-        }
+    if (updateError) {
+        alert(`Failed to update status: ${updateError.message}`);
+    } else {
+        const { data: { user: adminUser } } = await supabase.auth.getUser();
 
-        await loadUsers();
-        setUpdatingId(null);
-    };
+        await supabase.from("audit_logs").insert({
+            admin_email: adminUser?.email || "Unknown admin",
+            action: newStatus === "Approved" ? "Approved user account" : `${newStatus} user account`,
+            target_name: user.name,
+            target_type: user.type,
+            details: `Status changed to ${newStatus}`,
+        });
+    }
+
+    await loadUsers();
+    setUpdatingId(null);
+};
 
     const handleAddUser = async (e) => {
         e.preventDefault();
