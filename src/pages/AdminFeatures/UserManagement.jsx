@@ -145,6 +145,21 @@ export default function UserManagement() {
       if (error) {
         throw error;
       }
+      // Send an approval email — only when the account is being approved,
+      // not for suspend/decline/reactivate.
+      if (newStatus === "Approved" && user.email) {
+        try {
+          await fetch("/api/send-approval-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: user.email, name: user.name }),
+          });
+        } catch (emailError) {
+          // Don't block the approval itself if the email fails to send —
+          // just log it so we know.
+          console.error("Approval email failed to send:", emailError);
+        }
+      }
 
       // Log this action to the audit trail
       const {
