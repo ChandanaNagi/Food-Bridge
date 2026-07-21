@@ -366,7 +366,7 @@ export default function ShelterDashboard() {
       >
         <div style={styles.logoRow}>
           <div style={styles.logoBadge}>
-            <img src={logo} alt="FoodBridge" style={{ width: 170, display: "block" }} />
+            <img src={logo} alt="FoodBridge" style={{ width: 220, display: "block" }} />
           </div>
         </div>
 
