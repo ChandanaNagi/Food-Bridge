@@ -69,8 +69,8 @@ export default function AdminDashboard() {
     <div style={styles.page}>
       <header style={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ background: "#FFFFFF", borderRadius: 14, padding: 8, display: "flex" }}>
-            <img src={logo} alt="FoodBridge" style={{ width: 90, display: "block" }} />
+          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 8, display: "flex" }}>
+            <img src={logo} alt="FoodBridge" style={{ width: 130, display: "block" }} />
           </div>
           <div>
             <div style={styles.brand}>FoodBridge Detroit</div>
