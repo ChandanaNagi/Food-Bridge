@@ -351,12 +351,7 @@ export default function RestaurantDashboard() {
             active={activeSection === 'profile'}
             onClick={() => openSection('profile')}
           />
-          <NavButton
-            icon="⚙"
-            label="Restaurant Profile"
-            active={activeSection === 'profile'}
-            onClick={() => openSection('profile')}
-          />
+          
         </nav>
 
         <div style={styles.sidebarFooter}>
