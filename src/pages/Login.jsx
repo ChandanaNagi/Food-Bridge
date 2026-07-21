@@ -175,7 +175,7 @@ export default function Login() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <img src={logo} alt="FoodBridge Detroit" style={{ width: 160, display: "block", margin: "0 auto 10px" }} />
+        <img src={logo} alt="FoodBridge Detroit" style={{ width: 200, display: "block", margin: "0 auto 10px" }} />
         <div style={s.subtitle}>
           {mode === "login" ? "Sign in to your account" : "Create a new account"}
         </div>

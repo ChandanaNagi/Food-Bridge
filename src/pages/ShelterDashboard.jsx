@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import logo from "../assets/logo.png";
 
 const DECLINE_REASONS = [
   'At capacity — cannot receive more food',
@@ -364,10 +365,8 @@ export default function ShelterDashboard() {
         style={styles.sidebar}
       >
         <div style={styles.logoRow}>
-          <div style={styles.logo}>FB</div>
-          <div>
-            <div style={styles.brandName}>FoodBridge</div>
-            <div style={styles.brandLocation}>Detroit</div>
+          <div style={styles.logoBadge}>
+            <img src={logo} alt="FoodBridge" style={{ width: 170, display: "block" }} />
           </div>
         </div>
 
@@ -2391,6 +2390,14 @@ const styles = {
     justifyContent: 'center',
     fontSize: 15,
     fontWeight: 900,
+  },
+  logoBadge: {
+    background: '#FFFFFF',
+    borderRadius: 12,
+    padding: 6,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandName: {
     fontSize: 19,
