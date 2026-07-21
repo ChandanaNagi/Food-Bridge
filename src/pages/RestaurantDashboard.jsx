@@ -1659,6 +1659,195 @@ function ProfileSection({ restaurant }) {
           />
         </div>
       </div>
+
+      {restaurant?.id && <ClosuresPanel restaurantId={restaurant.id} />}
+    </div>
+  )
+}
+
+function ClosuresPanel({ restaurantId }) {
+  const [closures, setClosures] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({ closure_date: '', reason: '' })
+
+  useEffect(() => {
+    loadClosures()
+  }, [restaurantId])
+
+  const loadClosures = async () => {
+    setLoading(true)
+    setError('')
+
+    const { data, error: loadError } = await supabase
+      .from('restaurant_closures')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('closure_date', { ascending: true })
+
+    if (loadError) {
+      console.error('Load closures error:', loadError)
+      setError(loadError.message || 'Closure dates could not be loaded.')
+    } else {
+      setClosures(data || [])
+    }
+
+    setLoading(false)
+  }
+
+  const handleAdd = async (event) => {
+    event.preventDefault()
+    setError('')
+
+    if (!form.closure_date) {
+      setError('Please choose a date.')
+      return
+    }
+
+    setAdding(true)
+
+    const { error: insertError } = await supabase.from('restaurant_closures').insert({
+      restaurant_id: restaurantId,
+      closure_date: form.closure_date,
+      reason: form.reason.trim() || null,
+    })
+
+    if (insertError) {
+      console.error('Add closure error:', insertError)
+      setError(
+        insertError.code === '23505'
+          ? 'That date is already marked as a closure.'
+          : insertError.message || 'The closure date could not be added.'
+      )
+    } else {
+      setForm({ closure_date: '', reason: '' })
+      await loadClosures()
+    }
+
+    setAdding(false)
+  }
+
+  const handleDelete = async (closure) => {
+    setDeletingId(closure.id)
+    setError('')
+
+    const { error: deleteError } = await supabase
+      .from('restaurant_closures')
+      .delete()
+      .eq('id', closure.id)
+
+    if (deleteError) {
+      console.error('Delete closure error:', deleteError)
+      setError(deleteError.message || 'The closure date could not be removed.')
+    } else {
+      await loadClosures()
+    }
+
+    setDeletingId(null)
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+  const upcoming = closures.filter((c) => c.closure_date >= today)
+
+  return (
+    <div style={{ ...styles.panel, marginTop: 20 }}>
+      <PanelHeader
+        eyebrow="Availability"
+        title="Holiday & closure dates"
+      />
+
+      <p style={{ ...styles.sectionDescription, marginBottom: 16 }}>
+        Mark dates your restaurant won't be able to donate. Admins won't be able to
+        schedule an assignment for your restaurant on these dates.
+      </p>
+
+      {error && (
+        <div style={{ ...styles.declinedText, marginBottom: 12, color: '#9B302A' }}>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18, alignItems: 'flex-end' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#36423A' }}>Date</span>
+          <input
+            type="date"
+            value={form.closure_date}
+            onChange={(e) => setForm({ ...form, closure_date: e.target.value })}
+            disabled={adding}
+            style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '9px 11px', fontSize: 13 }}
+          />
+        </label>
+
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 160 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#36423A' }}>Reason (optional)</span>
+          <input
+            type="text"
+            value={form.reason}
+            onChange={(e) => setForm({ ...form, reason: e.target.value })}
+            placeholder="e.g. Thanksgiving"
+            disabled={adding}
+            style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '9px 11px', fontSize: 13, width: '100%', boxSizing: 'border-box' }}
+          />
+        </label>
+
+        <button type="submit" style={styles.primaryButton} disabled={adding}>
+          {adding ? 'Adding...' : 'Add closure date'}
+        </button>
+      </form>
+
+      {loading ? (
+        <div style={{ color: '#748077', fontSize: 13 }}>Loading closure dates...</div>
+      ) : upcoming.length === 0 ? (
+        <div style={{ color: '#748077', fontSize: 13 }}>No upcoming closure dates.</div>
+      ) : (
+        upcoming.map((closure) => (
+          <div
+            key={closure.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: '#F7F9F7',
+              border: '1px solid #E7ECE8',
+              marginBottom: 8,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#243229' }}>
+                {closure.closure_date}
+              </div>
+              {closure.reason && (
+                <div style={{ fontSize: 11, color: '#748077', marginTop: 2 }}>
+                  {closure.reason}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleDelete(closure)}
+              disabled={deletingId === closure.id}
+              style={{
+                background: '#FEF2F2',
+                color: '#991B1B',
+                border: '1px solid #FECACA',
+                borderRadius: 7,
+                padding: '7px 11px',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {deletingId === closure.id ? 'Removing...' : 'Remove'}
+            </button>
+          </div>
+        ))
+      )}
     </div>
   )
 }
