@@ -77,7 +77,7 @@ export default function RestaurantDashboard() {
 
   if (loading) return <div style={s.loading}>Loading...</div>
 
-  const canPostSurplus = assignment && (!donation || donation.status === 'declined')
+  const canPostSurplus = !!assignment
   const showDonationCard = donation && donation.status !== 'declined'
 
   return (
