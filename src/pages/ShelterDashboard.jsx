@@ -442,7 +442,13 @@ export default function ShelterDashboard() {
               Contact FoodBridge support to report a missed, delayed or unsafe
               donation.
             </div>
-            <button type="button" style={styles.supportButton}>
+            <button
+              type="button"
+              style={styles.supportButton}
+              onClick={() => {
+                window.location.href = "mailto:support@foodbridgedetroit.org?subject=FoodBridge Support Request";
+              }}
+            >
               Contact support
             </button>
           </div>
