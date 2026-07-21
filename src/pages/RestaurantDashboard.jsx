@@ -258,7 +258,7 @@ export default function RestaurantDashboard() {
       >
         <div style={styles.logoRow}>
           <div style={styles.logoBadge}>
-            <img src={logo} alt="FoodBridge" style={{ width: 240, display: "block" }} />
+            <img src={logo} alt="FoodBridge" style={{ width: 230, display: "block" }} />
           </div>
         </div>
 
