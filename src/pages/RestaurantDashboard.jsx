@@ -219,21 +219,21 @@ export default function RestaurantDashboard() {
         .fb-mobile-header { display: none; }
         .fb-main { margin-left: 260px; }
         @media (max-width: 900px) {
-          .fb-mobile-header { display: flex; }
+          .fb-mobile-header { display: flex !important; }
           .fb-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
-          .fb-sidebar.fb-sidebar-open { transform: translateX(0); }
-          .fb-main { margin-left: 0; padding-top: 66px; }
-          .fb-topbar { display: none; }
-          .fb-content { padding: 18px; }
-          .fb-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .fb-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
-          .fb-profile-grid { grid-template-columns: minmax(0, 1fr); }
+          .fb-sidebar.fb-sidebar-open { transform: translateX(0) !important; }
+          .fb-main { margin-left: 0 !important; padding-top: 66px; }
+          .fb-topbar { display: none !important; }
+          .fb-content { padding: 18px !important; }
+          .fb-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+          .fb-dashboard-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .fb-profile-grid { grid-template-columns: minmax(0, 1fr) !important; }
         }
         @media (max-width: 620px) {
-          .fb-stat-grid { grid-template-columns: minmax(0, 1fr); }
-          .fb-detail-grid { grid-template-columns: minmax(0, 1fr); }
-          .fb-detail-grid > div { grid-column: auto; }
-          .fb-rotation-grid { grid-template-columns: minmax(0, 1fr); }
+          .fb-stat-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .fb-detail-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .fb-detail-grid > div { grid-column: auto !important; }
+          .fb-rotation-grid { grid-template-columns: minmax(0, 1fr) !important; }
         }
       `}</style>
 
