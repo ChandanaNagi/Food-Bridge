@@ -329,7 +329,19 @@ export default function RestaurantDashboard() {
             onClick={() => openSection('notifications')}
             count={notifications.length}
           />
+<NavButton
+            icon="⚙"
+            label="Organization Requests"
+            active={false}
+            onClick={() => navigate('/restaurant/organizations')}
+          />
 
+          <NavButton
+            icon="⚙"
+            label="Restaurant Profile"
+            active={activeSection === 'profile'}
+            onClick={() => openSection('profile')}
+          />
           <NavButton
             icon="⚙"
             label="Restaurant Profile"
