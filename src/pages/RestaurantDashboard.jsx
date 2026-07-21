@@ -1300,7 +1300,7 @@ function ShelterSection({ assignment }) {
       </div>
 
       {shelter ? (
-        <div style={styles.profileGrid}>
+        <div className="fb-profile-grid" style={styles.profileGrid}>
           <div style={styles.panel}>
             <div style={styles.shelterProfileHeader}>
               <div style={styles.shelterProfileAvatar}>
