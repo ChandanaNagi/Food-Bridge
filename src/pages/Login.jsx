@@ -41,48 +41,57 @@ export default function Login() {
       return;
     }
 
-    const userId = data?.user?.id;
+    const userEmail = data?.user?.email?.trim().toLowerCase();
 
-    // Figure out which kind of account this is and whether it's approved yet.
-    // NOTE: assumes "restaurants" / "shelters" tables keyed by "id" = auth user id,
-    // with a "status" column. Adjust to match your schema if it differs.
-    const { data: shelterRow } = await supabase
-  .from("shelters")
-  .select("status")
-  .eq("email", loginForm.email)
-  .maybeSingle();
+    const { data: shelterRow, error: shelterLookupError } = await supabase
+      .from("shelters")
+      .select("id, name, email, status")
+      .ilike("email", userEmail)
+      .maybeSingle();
 
-const { data: restaurantRow } = await supabase
-  .from("restaurants")
-  .select("status")
-  .eq("email", loginForm.email)
-  .maybeSingle();
+    if (shelterLookupError) {
+      setError(shelterLookupError.message);
+      setLoading(false);
+      return;
+    }
+
+    const { data: restaurantRow, error: restaurantLookupError } = await supabase
+      .from("restaurants")
+      .select("id, name, email, status")
+      .ilike("email", userEmail)
+      .maybeSingle();
+
+    if (restaurantLookupError) {
+      setError(restaurantLookupError.message);
+      setLoading(false);
+      return;
+    }
 
     const matchedRow = shelterRow || restaurantRow;
 
     if (matchedRow && matchedRow.status === "Pending") {
-  await supabase.auth.signOut();
-  setError("Your account is still pending admin approval. Please check back soon.");
-  setLoading(false);
-  return;
-}
+      await supabase.auth.signOut();
+      setError("Your account is still pending admin approval. Please check back soon.");
+      setLoading(false);
+      return;
+    }
 
-if (matchedRow && matchedRow.status === "Suspended") {
-  await supabase.auth.signOut();
-  setError("Your account has been suspended. Contact an administrator for help.");
-  setLoading(false);
-  return;
-}
+    if (matchedRow && matchedRow.status === "Suspended") {
+      await supabase.auth.signOut();
+      setError("Your account has been suspended. Contact an administrator for help.");
+      setLoading(false);
+      return;
+    }
 
-if (matchedRow && matchedRow.status === "Declined") {
-  await supabase.auth.signOut();
-  setError("Your account application was declined. Contact an administrator for more information.");
-  setLoading(false);
-  return;
-}
+    if (matchedRow && matchedRow.status === "Declined") {
+      await supabase.auth.signOut();
+      setError("Your account application was declined. Contact an administrator for more information.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(false);
 
-    // NOTE: adjust these routes to match your actual app routes.
     if (shelterRow) {
       navigate("/shelter");
     } else if (restaurantRow) {
