@@ -28,6 +28,9 @@ export default function ShelterDashboard() {
 
   // Decline reason picker state
   const [showDeclineModal, setShowDeclineModal] = useState(false)
+  const [showAcceptModal, setShowAcceptModal] = useState(false)
+  const [pickupContactName, setPickupContactName] = useState('')
+  const [pickupContactPhone, setPickupContactPhone] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [otherReason, setOtherReason] = useState('')
 
@@ -206,7 +209,49 @@ export default function ShelterDashboard() {
       setResponding(false)
     }
   }
+const openAcceptModal = () => {
+    setPickupContactName('')
+    setPickupContactPhone('')
+    setError('')
+    setShowAcceptModal(true)
+  }
 
+  const closeAcceptModal = () => {
+    if (responding) return
+    setShowAcceptModal(false)
+  }
+
+  const submitAccept = async () => {
+    if (!pickupContactName.trim() || !pickupContactPhone.trim()) {
+      setError("Please enter the pickup person's name and phone number.")
+      return
+    }
+
+    if (!donation) return
+
+    try {
+      setResponding(true)
+      setError('')
+
+      const { error: updateError } = await supabase
+        .from('donations')
+        .update({
+          status: 'confirmed',
+          pickup_contact_name: pickupContactName.trim(),
+          pickup_contact_phone: pickupContactPhone.trim(),
+        })
+        .eq('id', donation.id)
+
+      if (updateError) throw updateError
+      setShowAcceptModal(false)
+      await loadDashboard()
+    } catch (err) {
+      console.error('Accept donation error:', err)
+      setError(err.message || 'Your response could not be saved.')
+    } finally {
+      setResponding(false)
+    }
+  }
   const openDeclineModal = () => {
     setDeclineReason('')
     setOtherReason('')
@@ -534,7 +579,7 @@ export default function ShelterDashboard() {
               completedCount={completedDonations.length}
               activeCount={activePickups.length}
               responding={responding}
-              onAccept={() => handleResponse('confirmed')}
+              onAccept={openAcceptModal}
               onDecline={openDeclineModal}
               onCollected={handleMarkCollected}
               onOpenSection={openSection}
@@ -546,7 +591,7 @@ export default function ShelterDashboard() {
               assignment={assignment}
               donation={donation}
               responding={responding}
-              onAccept={() => handleResponse('confirmed')}
+              onAccept={openAcceptModal}
               onDecline={openDeclineModal}
               onCollected={handleMarkCollected}
             />
@@ -640,6 +685,53 @@ export default function ShelterDashboard() {
                 style={styles.dangerButton}
               >
                 {responding ? 'Saving...' : 'Confirm decline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAcceptModal && (
+        <div style={styles.declineOverlay} onMouseDown={closeAcceptModal}>
+          <div style={styles.declineModal} onMouseDown={(event) => event.stopPropagation()}>
+            <div style={styles.declineModalTitle}>Confirm pickup details</div>
+            <div style={styles.declineModalSubtitle}>
+              Enter who will be picking this up so the restaurant knows who to expect.
+            </div>
+
+            {error && (
+              <div style={{ color: '#9B302A', fontSize: 13, marginBottom: 12 }}>{error}</div>
+            )}
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Pickup person's name</span>
+              <input
+                type="text"
+                value={pickupContactName}
+                onChange={(e) => setPickupContactName(e.target.value)}
+                placeholder="e.g. Maria Lopez"
+                disabled={responding}
+                style={styles.declineTextarea}
+              />
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Pickup person's phone</span>
+              <input
+                type="tel"
+                value={pickupContactPhone}
+                onChange={(e) => setPickupContactPhone(e.target.value)}
+                placeholder="e.g. (313) 555-0100"
+                disabled={responding}
+                style={styles.declineTextarea}
+              />
+            </label>
+
+            <div style={styles.declineModalButtons}>
+              <button type="button" onClick={closeAcceptModal} disabled={responding} style={styles.secondaryButton}>
+                Cancel
+              </button>
+              <button type="button" onClick={submitAccept} disabled={responding} style={styles.primaryButton}>
+                {responding ? 'Saving...' : 'Confirm accept'}
               </button>
             </div>
           </div>
