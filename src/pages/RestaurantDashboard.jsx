@@ -355,7 +355,12 @@ export default function RestaurantDashboard() {
             <div style={styles.supportText}>
               Contact FoodBridge support if a pickup or donation issue occurs.
             </div>
-            <button style={styles.supportButton}>
+            <button
+              style={styles.supportButton}
+              onClick={() => {
+                window.location.href = "mailto:support@foodbridgedetroit.org?subject=FoodBridge Support Request";
+              }}
+            >
               Contact support
             </button>
           </div>
