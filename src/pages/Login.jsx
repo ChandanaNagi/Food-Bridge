@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import logo from "../assets/logo.png";
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -173,7 +175,7 @@ export default function Login() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <div style={s.brand}>FoodBridge Detroit</div>
+        <img src={logo} alt="FoodBridge Detroit" style={{ width: 160, display: "block", margin: "0 auto 10px" }} />
         <div style={s.subtitle}>
           {mode === "login" ? "Sign in to your account" : "Create a new account"}
         </div>
