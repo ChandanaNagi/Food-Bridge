@@ -223,6 +223,17 @@ export default function RestaurantDashboard() {
           .fb-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
           .fb-sidebar.fb-sidebar-open { transform: translateX(0); }
           .fb-main { margin-left: 0; padding-top: 66px; }
+          .fb-topbar { display: none; }
+          .fb-content { padding: 18px; }
+          .fb-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .fb-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+          .fb-profile-grid { grid-template-columns: minmax(0, 1fr); }
+        }
+        @media (max-width: 620px) {
+          .fb-stat-grid { grid-template-columns: minmax(0, 1fr); }
+          .fb-detail-grid { grid-template-columns: minmax(0, 1fr); }
+          .fb-detail-grid > div { grid-column: auto; }
+          .fb-rotation-grid { grid-template-columns: minmax(0, 1fr); }
         }
       `}</style>
 
@@ -384,7 +395,7 @@ export default function RestaurantDashboard() {
 
       {/* Main content */}
       <main className="fb-main" style={styles.main}>
-        <div style={styles.topBar}>
+        <div className="fb-topbar" style={styles.topBar}>
           <div>
             <div style={styles.pageEyebrow}>
               Restaurant management portal
@@ -429,7 +440,7 @@ export default function RestaurantDashboard() {
           </div>
         </div>
 
-        <div style={styles.content}>
+        <div className="fb-content" style={styles.content}>
           {error && (
             <div style={styles.errorBanner}>
               <div>
@@ -564,7 +575,7 @@ function DashboardSection({
         </div>
       </section>
 
-      <section style={styles.statGrid}>
+      <section className="fb-stat-grid" style={styles.statGrid}>
         <StatCard
           icon="◉"
           title="Meals donated"
@@ -598,7 +609,7 @@ function DashboardSection({
         />
       </section>
 
-      <section style={styles.dashboardGrid}>
+      <section className="fb-dashboard-grid" style={styles.dashboardGrid}>
         <div style={styles.largeColumn}>
           <CurrentAssignmentCard
             assignment={assignment}
@@ -836,7 +847,7 @@ function DonationDetailsCard({ donation }) {
         }
       />
 
-      <div style={styles.detailGrid}>
+      <div className="fb-detail-grid" style={styles.detailGrid}>
         <DetailBox
           label="Food items"
           value={donation.food_items || 'Not provided'}
@@ -1211,7 +1222,7 @@ function ScheduleSection({ assignments }) {
             text="An administrator must create assignments for this restaurant."
           />
         ) : (
-          <div style={styles.rotationGrid}>
+          <div className="fb-rotation-grid" style={styles.rotationGrid}>
             {assignments.map((item, index) => (
               <div
                 key={item.id || index}
@@ -1289,7 +1300,7 @@ function ShelterSection({ assignment }) {
       </div>
 
       {shelter ? (
-        <div style={styles.shelterProfileGrid}>
+        <div style={styles.profileGrid}>
           <div style={styles.panel}>
             <div style={styles.shelterProfileHeader}>
               <div style={styles.shelterProfileAvatar}>
@@ -1559,7 +1570,7 @@ function ProfileSection({ restaurant }) {
         </button>
       </div>
 
-      <div style={styles.profileGrid}>
+      <div className="fb-profile-grid" style={styles.profileGrid}>
         <div style={styles.panel}>
           <div style={styles.restaurantProfileHeader}>
             <div style={styles.largeRestaurantAvatar}>
