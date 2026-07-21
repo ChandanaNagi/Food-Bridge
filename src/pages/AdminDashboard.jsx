@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import logo from "../assets/logo.png";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -67,10 +68,15 @@ export default function AdminDashboard() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <div>
-          <div style={styles.brand}>FoodBridge Detroit</div>
-          <h1 style={styles.headerTitle}>Admin Dashboard</h1>
-          <p style={styles.headerSubtitle}>Monitor assignments, organizations, and platform activity.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 10, padding: 5, display: "flex" }}>
+            <img src={logo} alt="FoodBridge" style={{ width: 34, display: "block" }} />
+          </div>
+          <div>
+            <div style={styles.brand}>FoodBridge Detroit</div>
+            <h1 style={styles.headerTitle}>Admin Dashboard</h1>
+            <p style={styles.headerSubtitle}>Monitor assignments, organizations, and platform activity.</p>
+          </div>
         </div>
         <div style={styles.headerRight}>
           <div style={styles.adminIdentity}>
