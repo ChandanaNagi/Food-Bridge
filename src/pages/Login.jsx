@@ -61,19 +61,25 @@ const { data: restaurantRow } = await supabase
     const matchedRow = shelterRow || restaurantRow;
 
     if (matchedRow && matchedRow.status === "Pending") {
-      await supabase.auth.signOut();
-      setError("Your account is still pending admin approval. Please check back soon.");
-      setLoading(false);
-      return;
-    }
+  await supabase.auth.signOut();
+  setError("Your account is still pending admin approval. Please check back soon.");
+  setLoading(false);
+  return;
+}
 
-    if (matchedRow && matchedRow.status === "Suspended") {
-      await supabase.auth.signOut();
-      setError("Your account has been suspended. Contact an administrator for help.");
-      setLoading(false);
-      return;
-    }
+if (matchedRow && matchedRow.status === "Suspended") {
+  await supabase.auth.signOut();
+  setError("Your account has been suspended. Contact an administrator for help.");
+  setLoading(false);
+  return;
+}
 
+if (matchedRow && matchedRow.status === "Declined") {
+  await supabase.auth.signOut();
+  setError("Your account application was declined. Contact an administrator for more information.");
+  setLoading(false);
+  return;
+}
     setLoading(false);
 
     // NOTE: adjust these routes to match your actual app routes.
