@@ -1,348 +1,201 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from "../../supabaseClient"
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../supabaseClient";
 
-export default function AdminDashboard() {
-  const navigate = useNavigate()
+export default function Analytics() {
+  const navigate = useNavigate();
+  const [assignments, setAssignments] = useState([]);
+  const [donations, setDonations] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [shelters, setShelters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("30");
 
-  const [stats, setStats] = useState({
-    total: 0,
-    confirmed: 0,
-    pending: 0,
-    declined: 0
-  })
+  useEffect(() => { loadAnalytics(); }, [period]);
 
-  const [pairs, setPairs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const loadAnalytics = async () => {
+    setLoading(true);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) { navigate("/"); return; }
 
-  useEffect(() => {
-    loadDashboard()
-  }, [])
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Number(period));
+    const isoStart = startDate.toISOString();
 
-  const loadDashboard = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const [
+      { data: assignmentRows },
+      { data: donationRows },
+      { data: restaurantRows },
+      { data: shelterRows },
+    ] = await Promise.all([
+      supabase.from("assignments").select("*, restaurants(name), shelters(name)").gte("created_at", isoStart).order("created_at", { ascending: true }),
+      supabase.from("donations").select("*").gte("posted_at", isoStart).order("posted_at", { ascending: true }),
+      supabase.from("restaurants").select("*"),
+      supabase.from("shelters").select("*"),
+    ]);
 
-    if (!user) {
-      navigate('/')
-      return
-    }
+    setAssignments(assignmentRows || []);
+    setDonations(donationRows || []);
+    setRestaurants(restaurantRows || []);
+    setShelters(shelterRows || []);
+    setLoading(false);
+  };
 
-    const today = new Date().toISOString().split('T')[0]
+  const stats = useMemo(() => {
+    const confirmed = assignments.filter((item) => item.status?.toLowerCase() === "confirmed").length;
+    const completedDonations = donations.filter((item) => ["collected", "completed", "confirmed"].includes(item.status?.toLowerCase())).length;
+    const activeOrganizations = [...restaurants, ...shelters].filter((item) => !item.status || ["approved", "active"].includes(item.status.toLowerCase())).length;
+    return {
+      assignments: assignments.length,
+      confirmed,
+      confirmationRate: assignments.length > 0 ? Math.round((confirmed / assignments.length) * 100) : 0,
+      donations: donations.length,
+      completedDonations,
+      activeOrganizations,
+    };
+  }, [assignments, donations, restaurants, shelters]);
 
-    const { data: assignments } = await supabase
-      .from('assignments')
-      .select('*, restaurants(name), shelters(name)')
-      .eq('assignment_date', today)
+  const dailyRows = useMemo(() => {
+    const map = {};
+    assignments.forEach((assignment) => {
+      const dateValue = assignment.assignment_date || assignment.created_at;
+      if (!dateValue) return;
+      const key = new Date(dateValue).toISOString().split("T")[0];
+      if (!map[key]) map[key] = { date: key, total: 0, confirmed: 0 };
+      map[key].total += 1;
+      if (assignment.status?.toLowerCase() === "confirmed") map[key].confirmed += 1;
+    });
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).slice(-10);
+  }, [assignments]);
 
-    if (assignments) {
-      setPairs(assignments)
+  const topRestaurants = useMemo(() => {
+    const counts = {};
+    assignments.forEach((assignment) => {
+      const name = assignment.restaurants?.name || "Unknown restaurant";
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [assignments]);
 
-      setStats({
-        total: assignments.length,
-        confirmed: assignments.filter(a => a.status === 'confirmed').length,
-        pending: assignments.filter(a => a.status === 'pending' || a.status === 'posted').length,
-        declined: assignments.filter(a => a.status === 'declined' || a.status === 'reassigning').length
-      })
-    }
-    setLoading(false)
-  }
+  const topShelters = useMemo(() => {
+    const counts = {};
+    assignments.forEach((assignment) => {
+      const name = assignment.shelters?.name || "Unknown shelter";
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [assignments]);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/')
-  }
-
-  const statusColor = (status) => {
-    if (status === 'confirmed') return s.badgeGreen
-    if (status === 'declined' || status === 'reassigning') return s.badgeRed
-    return s.badgeAmber
-  }
-
-  if (loading) {
-    return (
-      <div style={s.loading}>
-        Loading...
-      </div>
-    )
-  }
+  const maxDaily = Math.max(...dailyRows.map((row) => row.total), 1);
+  const formatDate = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
-    <div style={s.page}>
-      {/* HEADER */}
-      <div style={s.header}>
+    <div style={styles.page}>
+      <header style={styles.header}>
         <div>
-          <div style={s.headerSub}>FoodBridge Detroit</div>
-          <div style={s.headerTitle}>Admin Dashboard</div>
+          <div style={styles.brand}>FoodBridge Detroit</div>
+          <h1 style={styles.headerTitle}>Analytics Hub</h1>
+          <p style={styles.headerSubtitle}>Review assignment, donation, and participation trends.</p>
         </div>
-
-        <div style={s.headerRight}>
-          <div style={s.badge}>Admin</div>
-          <button onClick={handleSignOut} style={s.signOut}>
-            Sign out
-          </button>
+        <div style={styles.headerActions}>
+          <select value={period} onChange={(event) => setPeriod(event.target.value)} style={styles.periodSelect}>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+          </select>
+          <button type="button" onClick={() => navigate("/admin")} style={styles.backButton}>← Dashboard</button>
         </div>
-      </div>
+      </header>
 
-      {/* BODY */}
-      <div style={s.body}>
-        <div style={s.dashboardLayout}>
-          
-          {/* MAIN PANELS (LEFT) */}
-          <div style={s.mainContent}>
-            {/* STATS */}
-            <div style={s.grid}>
-              {[
-                { label: "Active pairs", value: stats.total, sub: "Today" },
-                { label: "Confirmed", value: stats.confirmed, sub: "Today", color: "#166534" },
-                { label: "Pending", value: stats.pending, sub: "Today", color: "#B45309" },
-                { label: "Declined", value: stats.declined, sub: "Today", color: "#991B1B" }
-              ].map((item, index) => (
-                <div key={index} style={s.statCard}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: item.color || "#2C5F2D" }}>
-                    {item.value}
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: 12 }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: "#6B7280" }}>{item.sub}</div>
+      <main style={styles.content}>
+        <section style={styles.statsGrid}>
+          <StatCard label="Assignments" value={stats.assignments} />
+          <StatCard label="Confirmed" value={stats.confirmed} valueColor="#166534" />
+          <StatCard label="Confirmation rate" value={`${stats.confirmationRate}%`} valueColor="#1D4ED8" />
+          <StatCard label="Donations posted" value={stats.donations} valueColor="#7C3AED" />
+          <StatCard label="Completed donations" value={stats.completedDonations} valueColor="#B45309" />
+          <StatCard label="Active organizations" value={stats.activeOrganizations} />
+        </section>
+
+        {loading ? (
+          <div style={styles.loadingCard}>Loading analytics...</div>
+        ) : (
+          <>
+            <section style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <h2 style={styles.cardTitle}>Assignment activity</h2>
+                  <p style={styles.cardSubtitle}>Daily assignments and confirmations</p>
                 </div>
-              ))}
-            </div>
+                <button onClick={loadAnalytics} style={styles.refreshButton}>Refresh</button>
+              </div>
 
-            {/* PAIRS */}
-            <div style={s.sectionLabel}>Today's Pairs</div>
-            {pairs.length === 0 ? (
-              <div style={s.empty}>No assignments today.</div>
-            ) : (
-              pairs.map((p, i) => (
-                <div key={i} style={s.pairRow}>
-                  <div>
-                    <div style={s.pairName}>{p.restaurants?.name}</div>
-                    <div style={s.pairSub}>→ {p.shelters?.name}</div>
-                  </div>
-                  <span style={statusColor(p.status)}>{p.status}</span>
+              {dailyRows.length === 0 ? (
+                <div style={styles.emptyState}>No assignment activity found.</div>
+              ) : (
+                <div style={styles.chart}>
+                  {dailyRows.map((row) => (
+                    <div key={row.date} style={styles.chartColumn}>
+                      <div style={styles.barArea}>
+                        <div title={`${row.total} assignments`} style={{ ...styles.totalBar, height: `${Math.max((row.total / maxDaily) * 150, 8)}px` }} />
+                        <div title={`${row.confirmed} confirmed`} style={{ ...styles.confirmedBar, height: `${Math.max((row.confirmed / maxDaily) * 150, row.confirmed ? 8 : 0)}px` }} />
+                      </div>
+                      <div style={styles.chartValue}>{row.total}</div>
+                      <div style={styles.chartLabel}>{formatDate(row.date)}</div>
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
+              )}
 
-            {/* IMPACT */}
-            <div style={s.impactCard}>
-              <div style={s.impactTitle}>Platform Impact</div>
-              <div>Total assignments: <b> {pairs.length}</b></div>
-              <div>Confirmed today: <b> {stats.confirmed}</b></div>
-              <div>
-                Participation rate: 
-                <b>{stats.total > 0 ? ` ${Math.round((stats.confirmed / stats.total) * 100)}%` : " N/A"}</b>
+              <div style={styles.legend}>
+                <span style={styles.legendItem}><span style={styles.legendTotal} />Assignments</span>
+                <span style={styles.legendItem}><span style={styles.legendConfirmed} />Confirmed</span>
+              </div>
+            </section>
+
+            <section style={styles.rankGrid}>
+              <RankingCard title="Top restaurants" subtitle="Most assignments in the selected period" rows={topRestaurants} />
+              <RankingCard title="Top shelters" subtitle="Most assignments in the selected period" rows={topShelters} />
+            </section>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function StatCard({ label, value, valueColor = "#2C5F2D" }) { return <div style={styles.statCard}><div style={{ ...styles.statValue, color: valueColor }}>{value}</div><div style={styles.statLabel}>{label}</div></div>; }
+function RankingCard({ title, subtitle, rows }) {
+  const maxValue = Math.max(...rows.map((row) => row.total), 1);
+  return (
+    <div style={styles.card}>
+      <div style={styles.cardHeader}><div><h2 style={styles.cardTitle}>{title}</h2><p style={styles.cardSubtitle}>{subtitle}</p></div></div>
+      {rows.length === 0 ? <div style={styles.emptyState}>No data available.</div> : (
+        <div style={styles.rankingList}>
+          {rows.map((row, index) => (
+            <div key={row.name} style={styles.rankingRow}>
+              <div style={styles.rankNumber}>{index + 1}</div>
+              <div style={styles.rankContent}>
+                <div style={styles.rankTop}><span style={styles.rankName}>{row.name}</span><span style={styles.rankValue}>{row.total}</span></div>
+                <div style={styles.progressTrack}><div style={{ ...styles.progressFill, width: `${(row.total / maxValue) * 100}%` }} /></div>
               </div>
             </div>
-          </div>
-
-          {/* RIGHT SIDE MENU */}
-          <nav style={s.adminSidebar}>
-            <div style={s.sidebarTitle}>NAVIGATION</div>
-            <div style={s.menuList}>
-              <button onClick={() => navigate("/admin/users")} style={s.menuItem}>
-                User Management
-              </button>
-              <button onClick={() => navigate("/admin/strikes")} style={s.menuItem}>
-                Strike Management
-              </button>
-              <button onClick={() => navigate("/admin/map")} style={s.menuItem}>
-                Donation Heat Map
-              </button>
-              <button onClick={() => navigate("/admin/audit")} style={s.menuItem}>
-                Audit Log
-              </button>
-              <button onClick={() => navigate("/admin/analytics")} style={s.menuItem}>
-                Analytics Hub
-              </button>
-            </div>
-          </nav>
-
+          ))}
         </div>
-      </div>
+      )}
     </div>
-  )
+  );
 }
 
-const s = {
-  page: {
-    minHeight: "100vh",
-    background: "#F8FAFC", // Cleaner, lighter background accent
-    fontFamily: "system-ui, sans-serif",
-    color: "#1E293B"
-  },
-  header: {
-    background: "#2C5F2D",
-    padding: "14px 20px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  headerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12
-  },
-  headerSub: {
-    fontSize: 10,
-    color: "rgba(255,255,255,.65)",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px"
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 700,
-    color: "#fff"
-  },
-  badge: {
-    background: "rgba(255,255,255,.18)",
-    borderRadius: 20,
-    padding: "3px 10px",
-    color: "#fff",
-    fontSize: 11
-  },
-  signOut: {
-    background: "none",
-    border: "1px solid rgba(255,255,255,.4)",
-    color: "#fff",
-    borderRadius: 8,
-    padding: "5px 12px",
-    cursor: "pointer",
-    fontSize: 12
-  },
-  body: {
-    padding: "24px 20px",
-    maxWidth: 1400,
-    margin: "0 auto"
-  },
-  dashboardLayout: {
-    display: "grid",
-    gridTemplateColumns: "1fr 260px", // Defined explicit layout hierarchy 
-    gap: 24,
-    alignItems: "start"
-  },
-  mainContent: {
-    width: "100%"
-  },
-  adminSidebar: {
-    background: "#fff",
-    padding: "20px 16px",
-    borderRadius: 12,
-    boxShadow: "0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.02)",
-    position: "sticky",
-    top: 24,
-    border: "1px solid #E2E8F0"
-  },
-  sidebarTitle: {
-    color: "#64748B",
-    fontWeight: 700,
-    fontSize: 11,
-    letterSpacing: "0.8px",
-    marginBottom: 16,
-    paddingLeft: 8
-  },
-  menuList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4
-  },
-  menuItem: {
-    width: "100%",
-    background: "transparent",
-    color: "#334155",
-    border: "none",
-    borderRadius: 6,
-    padding: "10px 12px",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 500,
-    textAlign: "left",
-    transition: "all 0.2s ease",
-    display: "flex",
-    alignItems: "center"
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 12,
-    marginBottom: 20
-  },
-  statCard: {
-    background: "#fff",
-    padding: 15,
-    borderRadius: 12,
-    border: "1px solid #E2E8F0"
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    color: "#64748B",
-    letterSpacing: "0.5px",
-    marginBottom: 10
-  },
-  pairRow: {
-    background: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    border: "1px solid #E2E8F0"
-  },
-  pairName: {
-    fontWeight: 500
-  },
-  pairSub: {
-    fontSize: 11,
-    color: "#6B7280"
-  },
-  impactCard: {
-    background: "#EBF5EB",
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 20,
-    color: "#1E293B"
-  },
-  impactTitle: {
-    fontWeight: 600,
-    color: "#2C5F2D",
-    marginBottom: 10
-  },
-  badgeGreen: {
-    background: "#F0FDF4",
-    color: "#166534",
-    padding: "3px 8px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 500
-  },
-  badgeAmber: {
-    background: "#FFFBEB",
-    color: "#B45309",
-    padding: "3px 8px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 500
-  },
-  badgeRed: {
-    background: "#FEF2F2",
-    color: "#991B1B",
-    padding: "3px 8px",
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 500
-  },
-  empty: {
-    color: "#6B7280",
-    fontSize: 13,
-    padding: "20px 0"
-  },
-  loading: {
-    height: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#64748B"
-  }
-}
+const styles = {
+  page: { minHeight: "100vh", background: "#F4F8F4", color: "#17211A", fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" },
+  header: { background: "#2C5F2D", color: "#FFFFFF", padding: "24px clamp(18px, 4vw, 48px)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" },
+  brand: { fontSize: 11, color: "rgba(255,255,255,.72)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 5 }, headerTitle: { margin: 0, fontSize: 25 }, headerSubtitle: { margin: "6px 0 0", color: "rgba(255,255,255,.78)", fontSize: 13 },
+  headerActions: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }, periodSelect: { background: "#FFFFFF", color: "#2C5F2D", border: "none", borderRadius: 9, padding: "9px 12px", fontWeight: 650 }, backButton: { background: "transparent", color: "#FFFFFF", border: "1px solid rgba(255,255,255,.5)", borderRadius: 9, padding: "9px 14px", cursor: "pointer", fontWeight: 600 },
+  content: { width: "min(1220px, calc(100% - 32px))", margin: "0 auto", padding: "26px 0 50px" }, statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 22 }, statCard: { background: "#FFFFFF", border: "1px solid #E1E9E2", borderRadius: 14, padding: 18 }, statValue: { fontSize: 29, fontWeight: 800 }, statLabel: { marginTop: 5, fontSize: 12, fontWeight: 750 },
+  card: { background: "#FFFFFF", border: "1px solid #DCE7DD", borderRadius: 15, overflow: "hidden" }, cardHeader: { padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 15, flexWrap: "wrap", borderBottom: "1px solid #E8EEE9" }, cardTitle: { margin: 0, color: "#244D26", fontSize: 18 }, cardSubtitle: { margin: "5px 0 0", color: "#748077", fontSize: 12 }, refreshButton: { background: "#EEF6EE", color: "#2C5F2D", border: "1px solid #CDE0CE", borderRadius: 8, padding: "8px 13px", cursor: "pointer", fontWeight: 600 },
+  loadingCard: { background: "#FFFFFF", border: "1px solid #DCE7DD", borderRadius: 15, padding: 40, textAlign: "center", color: "#748077" }, chart: { minHeight: 230, padding: "28px 22px 15px", display: "flex", alignItems: "flex-end", gap: 14, overflowX: "auto" }, chartColumn: { minWidth: 58, flex: 1, textAlign: "center" }, barArea: { height: 160, display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 4 }, totalBar: { width: 15, background: "#B7CFBA", borderRadius: "5px 5px 0 0" }, confirmedBar: { width: 15, background: "#2C5F2D", borderRadius: "5px 5px 0 0" }, chartValue: { marginTop: 7, fontSize: 11, fontWeight: 750, color: "#344138" }, chartLabel: { marginTop: 3, fontSize: 10, color: "#7A847D" },
+  legend: { padding: "0 22px 20px", display: "flex", gap: 18, justifyContent: "center" }, legendItem: { display: "flex", alignItems: "center", gap: 6, color: "#657067", fontSize: 11 }, legendTotal: { width: 10, height: 10, borderRadius: 3, background: "#B7CFBA" }, legendConfirmed: { width: 10, height: 10, borderRadius: 3, background: "#2C5F2D" },
+  rankGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginTop: 20 }, rankingList: { padding: 16 }, rankingRow: { display: "flex", alignItems: "center", gap: 12, padding: "11px 4px", borderBottom: "1px solid #EDF1ED" }, rankNumber: { width: 28, height: 28, borderRadius: 9, background: "#EAF5EB", color: "#2C5F2D", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }, rankContent: { flex: 1 }, rankTop: { display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 7 }, rankName: { fontSize: 12, fontWeight: 700, color: "#2C3730" }, rankValue: { fontSize: 11, fontWeight: 800, color: "#2C5F2D" }, progressTrack: { height: 6, borderRadius: 999, background: "#EDF2EE", overflow: "hidden" }, progressFill: { height: "100%", borderRadius: 999, background: "#73A779" }, emptyState: { padding: 35, textAlign: "center", color: "#748077", fontSize: 13 },
+};
