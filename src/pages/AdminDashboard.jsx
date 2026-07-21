@@ -130,6 +130,7 @@ export default function AdminDashboard() {
 
           <nav style={styles.sidebar}>
             <div style={styles.sidebarTitle}>ADMIN TOOLS</div>
+            <NavButton title="Assignment Management" subtitle="Pair restaurants with shelters" onClick={() => navigate("/admin/assignments")} />
             <NavButton title="User Management" subtitle="Approve and manage organizations" onClick={() => navigate("/admin/users")} />
             <NavButton title="Strike Management" subtitle="Issue and review penalties" onClick={() => navigate("/admin/strikes")} />
             <NavButton title="Donation Heat Map" subtitle="View donation activity by location" onClick={() => navigate("/admin/map")} />

@@ -12,6 +12,7 @@ import AuditLog from './pages/AdminFeatures/AuditLog'
 import DonationHeatMap from './pages/AdminFeatures/DonationHeatMap'
 import StrikeManagement from './pages/AdminFeatures/StrikeManagement'
 import UserManagement from './pages/AdminFeatures/UserManagement'
+import AssignmentManagement from './pages/AdminFeatures/AssignmentManagement'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/admin/map" element={<DonationHeatMap />} />
         <Route path="/admin/audit" element={<AuditLog />} />
         <Route path="/admin/analytics" element={<Analytics />} />
+        <Route path="/admin/assignments" element={<AssignmentManagement />} />
       </Routes>
     </Router>
   )
