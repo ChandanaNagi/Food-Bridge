@@ -843,6 +843,13 @@ function DonationDetailsCard({ donation }) {
       />
 
       <div className="fb-detail-grid" style={styles.detailGrid}>
+        {donation.pickup_contact_name && (
+          <DetailBox
+            label="Pickup person"
+            value={`${donation.pickup_contact_name}${donation.pickup_contact_phone ? ` — ${donation.pickup_contact_phone}` : ''}`}
+            wide
+          />
+        )}
         <DetailBox
           label="Food items"
           value={donation.food_items || 'Not provided'}
