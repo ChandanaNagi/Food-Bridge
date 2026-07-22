@@ -26,6 +26,7 @@ export default function UserManagement() {
     email: "",
     password: "",
     type: "Shelter",
+    address: "",
   });
 
   useEffect(() => {
@@ -276,6 +277,7 @@ export default function UserManagement() {
           id: newUserId,
           name: cleanName,
           email: cleanEmail,
+          address: form.address.trim() || null,
           status: "Pending",
         });
 
@@ -553,6 +555,23 @@ export default function UserManagement() {
                     })
                   }
                   placeholder="At least 6 characters"
+                  style={styles.input}
+                  disabled={adding}
+                />
+              </label>
+              <label style={styles.fieldGroup}>
+                <span style={styles.label}>Address</span>
+
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      address: event.target.value,
+                    })
+                  }
+                  placeholder="e.g. 1234 Woodward Ave, Detroit, MI"
                   style={styles.input}
                   disabled={adding}
                 />
