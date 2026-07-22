@@ -20,6 +20,9 @@ export default function UserManagement() {
     type: "",
     text: "",
   });
+  const [editingUser, setEditingUser] = useState(null);
+    const [editForm, setEditForm] = useState({ name: "", email: "", address: "" });
+    const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -127,7 +130,69 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserStatus = async (user, newStatus) => {
+  const openEdit = (user) => {
+        setEditingUser(user);
+        setEditForm({
+            name: user.name || "",
+            email: user.email || "",
+            address: user.address || "",
+        });
+        setMessage({ type: "", text: "" });
+    };
+
+    const closeEdit = () => {
+        if (saving) return;
+        setEditingUser(null);
+    };
+
+    const handleSaveEdit = async (event) => {
+        event.preventDefault();
+
+        if (!editingUser) return;
+
+        if (!editForm.name.trim() || !editForm.email.trim()) {
+            setMessage({ type: "error", text: "Name and email are required." });
+            return;
+        }
+
+        setSaving(true);
+        setMessage({ type: "", text: "" });
+
+        const table = editingUser.type === "Restaurant" ? "restaurants" : "shelters";
+
+        try {
+            const { error: updateError } = await supabase
+                .from(table)
+                .update({
+                    name: editForm.name.trim(),
+                    email: editForm.email.trim(),
+                    address: editForm.address.trim() || null,
+                })
+                .eq("id", editingUser.id);
+
+            if (updateError) throw updateError;
+
+            const {
+                data: { user: adminUser },
+            } = await supabase.auth.getUser();
+
+            await supabase.from("audit_logs").insert({
+                admin_email: adminUser?.email || "Unknown admin",
+                action: "Updated user profile",
+                target_name: editForm.name.trim(),
+                target_type: editingUser.type,
+                details: "Admin edited organization profile details.",
+            });
+
+            setMessage({ type: "success", text: `${editForm.name.trim()} was updated.` });
+            setEditingUser(null);
+            await loadUsers();
+        } catch (error) {
+            setMessage({ type: "error", text: error.message || "The profile could not be updated." });
+        } finally {
+            setSaving(false);
+        }
+    }; const updateUserStatus = async (user, newStatus) => {
     const actionKey = `${user.type}-${user.id}`;
     const table =
       user.type === "Restaurant" ? "restaurants" : "shelters";
@@ -725,6 +790,13 @@ export default function UserManagement() {
 
                         <td style={styles.tableCell}>
                           <div style={styles.actionGroup}>
+                            <button
+                                type="button"
+                                onClick={() => openEdit(user)}
+                                style={styles.editButton}
+                            >
+                                Edit
+                            </button>
                             {status !== "Approved" && (
                               <button
                                 type="button"
@@ -787,6 +859,92 @@ export default function UserManagement() {
           )}
         </section>
       </main>
+      {editingUser && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(19, 40, 31, 0.55)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 20,
+                        zIndex: 1000,
+                    }}
+                    onMouseDown={closeEdit}
+                >
+                    <div
+                        style={{
+                            width: "min(480px, 100%)",
+                            background: "#FFFFFF",
+                            borderRadius: 17,
+                            padding: 24,
+                            boxShadow: "0 20px 60px rgba(0,0,0,.24)",
+                        }}
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <h2 style={{ margin: "0 0 5px", fontSize: 18, color: "#244D26" }}>
+                            Edit {editingUser.type.toLowerCase()}
+                        </h2>
+                        <p style={{ margin: "0 0 18px", fontSize: 13, color: "#6B756D" }}>
+                            Update this organization's profile information.
+                        </p>
+
+                        <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <label style={styles.fieldGroup}>
+                                <span style={styles.label}>Organization name</span>
+                                <input
+                                    type="text"
+                                    value={editForm.name}
+                                    onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                                    style={styles.input}
+                                    disabled={saving}
+                                />
+                            </label>
+
+                            <label style={styles.fieldGroup}>
+                                <span style={styles.label}>Email address</span>
+                                <input
+                                    type="email"
+                                    value={editForm.email}
+                                    onChange={(event) => setEditForm({ ...editForm, email: event.target.value })}
+                                    style={styles.input}
+                                    disabled={saving}
+                                />
+                            </label>
+
+                            <label style={styles.fieldGroup}>
+                                <span style={styles.label}>Address</span>
+                                <input
+                                    type="text"
+                                    value={editForm.address}
+                                    onChange={(event) => setEditForm({ ...editForm, address: event.target.value })}
+                                    style={styles.input}
+                                    disabled={saving}
+                                />
+                            </label>
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+                                <button
+                                    type="button"
+                                    onClick={closeEdit}
+                                    disabled={saving}
+                                    style={styles.cancelButton}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    style={styles.createButton}
+                                >
+                                    {saving ? "Saving..." : "Save changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
     </div>
   );
 }
@@ -870,5 +1028,15 @@ const styles = { page: { minHeight: "100vh", background: "#F4F8F4", color: "#172
  approveButton: { background: "#2C5F2D", color: "#FFFFFF", border: "none", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
  suspendButton: { background: "#FFF7ED", color: "#9A3412", border: "1px solid #FED7AA", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
  declineButton: { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
+ editButton: {
+    background: "#EFF6FF",
+    color: "#1D4ED8",
+    border: "1px solid #BFDBFE",
+    borderRadius: 7,
+    padding: "7px 11px",
+    cursor: "pointer",
+    fontSize: 11,
+    fontWeight: 700,
+  },
  stateMessage: { padding: 35, color: "#748077", fontSize: 13, textAlign: "center", },
  };
