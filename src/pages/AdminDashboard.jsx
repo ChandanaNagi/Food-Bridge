@@ -142,6 +142,7 @@ export default function AdminDashboard() {
             <NavButton title="Donation Heat Map" subtitle="View donation activity by location" onClick={() => navigate("/admin/map")} />
             <NavButton title="Audit Log" subtitle="Track administrative actions" onClick={() => navigate("/admin/audit")} />
             <NavButton title="Analytics Hub" subtitle="Review performance trends" onClick={() => navigate("/admin/analytics")} />
+              <NavButton title="Profile Update Requests" subtitle="Review organization info changes" onClick={() => navigate("/admin/profile-requests")} />
           </nav>
         </section>
       </main>

@@ -13,6 +13,7 @@ import DonationHeatMap from './pages/AdminFeatures/DonationHeatMap'
 import StrikeManagement from './pages/AdminFeatures/StrikeManagement'
 import UserManagement from './pages/AdminFeatures/UserManagement'
 import AssignmentManagement from './pages/AdminFeatures/AssignmentManagement'
+import ProfileUpdateRequests from './pages/AdminFeatures/ProfileUpdateRequests'
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/admin/audit" element={<AuditLog />} />
         <Route path="/admin/analytics" element={<Analytics />} />
         <Route path="/admin/assignments" element={<AssignmentManagement />} />
+        <Route path="/admin/profile-requests" element={<ProfileUpdateRequests />} />
       </Routes>
     </Router>
   )
