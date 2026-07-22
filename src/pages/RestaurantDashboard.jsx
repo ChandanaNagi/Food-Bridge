@@ -937,9 +937,25 @@ function CurrentAssignmentCard({
                 </button>
               )}
 
-            <button style={styles.secondaryButton}>
-              Contact shelter
-            </button>
+            -            <button style={styles.secondaryButton}>
+-              Contact shelter
+-            </button>
++            <button
++              style={styles.secondaryButton}
++              onClick={() => {
++                if (assignment.shelters?.phone) {
++                  window.location.href = `tel:${assignment.shelters.phone}`
++                } else if (assignment.shelters?.email) {
++                  window.location.href = `mailto:${assignment.shelters.email}`
++                } else {
++                  window.alert(
++                    'No contact info on file for this shelter yet.'
++                  )
++                }
++              }}
++            >
++              Contact shelter
++            </button>
           </div>
 
           {donation?.status === 'posted' && (
