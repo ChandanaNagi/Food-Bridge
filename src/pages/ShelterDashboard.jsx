@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { ensureTodaysRotation } from '../lib/rotation'
 import logo from "../assets/logo.png";
 
 const DECLINE_REASONS = [
@@ -15,8 +16,11 @@ export default function ShelterDashboard() {
   const navigate = useNavigate()
 
   const [shelter, setShelter] = useState(null)
-  const [assignment, setAssignment] = useState(null)
-  const [donation, setDonation] = useState(null)
+  // Today's assignments — an array because rotation can pair more than one
+  // restaurant with this shelter on the same day. Each item is an
+  // assignment row (with its nested `restaurants`) plus a `.donation`
+  // field holding that assignment's latest donation, if any.
+  const [todaysAssignments, setTodaysAssignments] = useState([])
   const [upcoming, setUpcoming] = useState([])
   const [history, setHistory] = useState([])
   const [notifications, setNotifications] = useState([])
@@ -37,6 +41,11 @@ export default function ShelterDashboard() {
   const [pickupContactPhone, setPickupContactPhone] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [otherReason, setOtherReason] = useState('')
+
+  // Which donation the accept/decline modal is currently acting on — needed
+  // now that a shelter can have more than one pickup to respond to per day.
+  const [activeDonation, setActiveDonation] = useState(null)
+  const [activeRestaurantName, setActiveRestaurantName] = useState('')
 
   useEffect(() => {
     loadDashboard()
@@ -80,42 +89,51 @@ export default function ShelterDashboard() {
 
       const today = getTodayValue()
 
-      const { data: assignmentRow, error: assignmentError } = await supabase
+      // Self-healing rotation: fills in today's restaurant-shelter pairings
+      // if an admin hasn't (or hasn't yet) created them manually.
+      await ensureTodaysRotation()
+
+      const { data: assignmentRows, error: assignmentError } = await supabase
         .from('assignments')
         .select('*, restaurants(*)')
         .eq('shelter_id', shelterRow.id)
         .eq('assignment_date', today)
-        .maybeSingle()
+        .order('created_at', { ascending: true })
 
       if (assignmentError) throw assignmentError
-      setAssignment(assignmentRow || null)
 
-      if (assignmentRow) {
-        const { data: donationRows, error: donationError } = await supabase
-          .from('donations')
-          .select('*')
-          .eq('assignment_id', assignmentRow.id)
-          .order('posted_at', { ascending: false })
-          .limit(1)
+      const todaysList = assignmentRows || []
 
-        if (donationError) throw donationError
+      // For each of today's assignments, load its latest donation and make
+      // sure a "new donation" notification exists if one's been posted.
+      const withDonations = await Promise.all(
+        todaysList.map(async (assignmentRow) => {
+          const { data: donationRows, error: donationError } = await supabase
+            .from('donations')
+            .select('*')
+            .eq('assignment_id', assignmentRow.id)
+            .order('posted_at', { ascending: false })
+            .limit(1)
 
-        const latestDonation =
-          donationRows && donationRows.length > 0 ? donationRows[0] : null
+          if (donationError) throw donationError
 
-        setDonation(latestDonation)
+          const latestDonation =
+            donationRows && donationRows.length > 0 ? donationRows[0] : null
 
-        if (latestDonation?.status === 'posted') {
-          await ensureDonationNotification({
-            shelterId: shelterRow.id,
-            donation: latestDonation,
-            restaurantName:
-              assignmentRow.restaurants?.name || 'A restaurant partner',
-          })
-        }
-      } else {
-        setDonation(null)
-      }
+          if (latestDonation?.status === 'posted') {
+            await ensureDonationNotification({
+              shelterId: shelterRow.id,
+              donation: latestDonation,
+              restaurantName:
+                assignmentRow.restaurants?.name || 'A restaurant partner',
+            })
+          }
+
+          return { ...assignmentRow, donation: latestDonation }
+        })
+      )
+
+      setTodaysAssignments(withDonations)
 
       const { data: futureRows, error: futureError } = await supabase
         .from('assignments')
@@ -190,7 +208,7 @@ export default function ShelterDashboard() {
   }
 
   const handleResponse = async (status, reason = null) => {
-    if (!donation) return
+    if (!activeDonation) return
 
     try {
       setResponding(true)
@@ -202,7 +220,7 @@ export default function ShelterDashboard() {
           status,
           decline_reason: reason,
         })
-        .eq('id', donation.id)
+        .eq('id', activeDonation.id)
 
       if (updateError) throw updateError
       await loadDashboard()
@@ -213,7 +231,9 @@ export default function ShelterDashboard() {
       setResponding(false)
     }
   }
-const openAcceptModal = () => {
+const openAcceptModal = (donation, restaurantName = '') => {
+    setActiveDonation(donation)
+    setActiveRestaurantName(restaurantName)
     setPickupContactName('')
     setPickupContactPhone('')
     setError('')
@@ -223,6 +243,7 @@ const openAcceptModal = () => {
   const closeAcceptModal = () => {
     if (responding) return
     setShowAcceptModal(false)
+    setActiveDonation(null)
   }
 
   const submitAccept = async () => {
@@ -231,7 +252,7 @@ const openAcceptModal = () => {
       return
     }
 
-    if (!donation) return
+    if (!activeDonation) return
 
     try {
       setResponding(true)
@@ -244,10 +265,11 @@ const openAcceptModal = () => {
           pickup_contact_name: pickupContactName.trim(),
           pickup_contact_phone: pickupContactPhone.trim(),
         })
-        .eq('id', donation.id)
+        .eq('id', activeDonation.id)
 
       if (updateError) throw updateError
       setShowAcceptModal(false)
+      setActiveDonation(null)
       await loadDashboard()
     } catch (err) {
       console.error('Accept donation error:', err)
@@ -256,7 +278,9 @@ const openAcceptModal = () => {
       setResponding(false)
     }
   }
-  const openDeclineModal = () => {
+  const openDeclineModal = (donation, restaurantName = '') => {
+    setActiveDonation(donation)
+    setActiveRestaurantName(restaurantName)
     setDeclineReason('')
     setOtherReason('')
     setError('')
@@ -266,6 +290,7 @@ const openAcceptModal = () => {
   const closeDeclineModal = () => {
     if (responding) return
     setShowDeclineModal(false)
+    setActiveDonation(null)
   }
 
   const submitDecline = async () => {
@@ -279,9 +304,10 @@ const openAcceptModal = () => {
 
     await handleResponse('declined', finalReason)
     setShowDeclineModal(false)
+    setActiveDonation(null)
   }
 
-  const handleMarkCollected = async () => {
+  const handleMarkCollected = async (donation) => {
     if (!donation) return
 
     try {
@@ -409,12 +435,11 @@ const openAcceptModal = () => {
   const dashboardNotifications = useMemo(
     () =>
       buildDashboardNotifications({
-        assignment,
-        donation,
+        todaysAssignments,
         nextAssignment,
         databaseNotifications: notifications,
       }),
-    [assignment, donation, nextAssignment, notifications]
+    [todaysAssignments, nextAssignment, notifications]
   )
 
   if (loading) {
@@ -623,8 +648,7 @@ const openAcceptModal = () => {
           {activeSection === 'dashboard' && (
             <DashboardSection
               shelter={shelter}
-              assignment={assignment}
-              donation={donation}
+              assignments={todaysAssignments}
               upcoming={upcoming}
               history={history}
               notifications={dashboardNotifications}
@@ -641,8 +665,7 @@ const openAcceptModal = () => {
 
           {activeSection === 'pickup' && (
             <CurrentPickupSection
-              assignment={assignment}
-              donation={donation}
+              assignments={todaysAssignments}
               responding={responding}
               onAccept={openAcceptModal}
               onDecline={openDeclineModal}
@@ -651,11 +674,11 @@ const openAcceptModal = () => {
           )}
 
           {activeSection === 'schedule' && (
-            <ScheduleSection assignment={assignment} upcoming={upcoming} />
+            <ScheduleSection assignments={todaysAssignments} upcoming={upcoming} />
           )}
 
           {activeSection === 'restaurant' && (
-            <RestaurantSection assignment={assignment} />
+            <RestaurantSection assignments={todaysAssignments} />
           )}
 
           {activeSection === 'history' && (
@@ -789,7 +812,8 @@ const openAcceptModal = () => {
           >
             <div style={styles.declineModalTitle}>Decline donation</div>
             <div style={styles.declineModalSubtitle}>
-              Select the reason your shelter cannot accept this donation.
+              Select the reason your shelter cannot accept this donation
+              {activeRestaurantName ? ` from ${activeRestaurantName}` : ''}.
             </div>
 
             <div style={styles.reasonList}>
@@ -851,7 +875,7 @@ const openAcceptModal = () => {
           <div style={styles.declineModal} onMouseDown={(event) => event.stopPropagation()}>
             <div style={styles.declineModalTitle}>Confirm pickup details</div>
             <div style={styles.declineModalSubtitle}>
-              Enter who will be picking this up so the restaurant knows who to expect.
+              Enter who will be picking up{activeRestaurantName ? ` the order from ${activeRestaurantName}` : ' this order'} so the restaurant knows who to expect.
             </div>
 
             {error && (
@@ -899,8 +923,7 @@ const openAcceptModal = () => {
 
 function DashboardSection({
   shelter,
-  assignment,
-  donation,
+  assignments,
   upcoming,
   history,
   notifications,
@@ -984,18 +1007,13 @@ function DashboardSection({
 
       <section className="fb-dashboard-grid" style={styles.dashboardGrid}>
         <div style={styles.largeColumn}>
-          <CurrentPickupCard
-            assignment={assignment}
-            donation={donation}
+          <CurrentPickupList
+            assignments={assignments}
             responding={responding}
             onAccept={onAccept}
             onDecline={onDecline}
             onCollected={onCollected}
           />
-
-          {donation && donation.status !== 'declined' && (
-            <DonationDetailsCard donation={donation} />
-          )}
 
           <RecentHistoryCard
             history={history}
@@ -1029,8 +1047,7 @@ function DashboardSection({
 }
 
 function CurrentPickupSection({
-  assignment,
-  donation,
+  assignments,
   responding,
   onAccept,
   onDecline,
@@ -1042,25 +1059,56 @@ function CurrentPickupSection({
         <div>
           <h2 style={styles.sectionHeading}>Current pickup</h2>
           <p style={styles.sectionDescription}>
-            Review today's restaurant assignment and respond to its surplus
-            listing.
+            Review today's restaurant assignment(s) and respond to each
+            surplus listing.
           </p>
         </div>
       </div>
 
-      <CurrentPickupCard
-        assignment={assignment}
-        donation={donation}
+      <CurrentPickupList
+        assignments={assignments}
         responding={responding}
         onAccept={onAccept}
         onDecline={onDecline}
         onCollected={onCollected}
       />
-
-      {donation && donation.status !== 'declined' && (
-        <DonationDetailsCard donation={donation} />
-      )}
     </div>
+  )
+}
+
+function CurrentPickupList({ assignments, responding, onAccept, onDecline, onCollected }) {
+  if (!assignments || assignments.length === 0) {
+    return (
+      <div style={styles.panel}>
+        <PanelHeader eyebrow="Current rotation" title="Today's restaurant pickup" />
+        <EmptyState
+          icon="□"
+          title="No pickup scheduled today"
+          text="When the rotation is generated, today's restaurant assignment(s) will appear here."
+        />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {assignments.map((item) => (
+        <div key={item.id} style={styles.pickupCardGroup}>
+          <CurrentPickupCard
+            assignment={item}
+            donation={item.donation}
+            responding={responding}
+            onAccept={() => onAccept(item.donation, item.restaurants?.name)}
+            onDecline={() => onDecline(item.donation, item.restaurants?.name)}
+            onCollected={() => onCollected(item.donation)}
+          />
+
+          {item.donation && item.donation.status !== 'declined' && (
+            <DonationDetailsCard donation={item.donation} />
+          )}
+        </div>
+      ))}
+    </>
   )
 }
 
@@ -1532,8 +1580,8 @@ function RecentHistoryCard({ history, onViewAll }) {
   )
 }
 
-function ScheduleSection({ assignment, upcoming }) {
-  const assignments = assignment ? [assignment, ...upcoming] : upcoming
+function ScheduleSection({ assignments: todaysAssignments, upcoming }) {
+  const assignments = [...(todaysAssignments || []), ...upcoming]
 
   return (
     <div>
@@ -1624,8 +1672,8 @@ function ScheduleSection({ assignment, upcoming }) {
   )
 }
 
-function RestaurantSection({ assignment }) {
-  const restaurant = assignment?.restaurants
+function RestaurantSection({ assignments }) {
+  const withRestaurants = (assignments || []).filter((item) => item.restaurants)
 
   return (
     <div>
@@ -1638,7 +1686,7 @@ function RestaurantSection({ assignment }) {
         </div>
       </div>
 
-      {!restaurant ? (
+      {withRestaurants.length === 0 ? (
         <div style={styles.panel}>
           <EmptyState
             icon="◉"
@@ -1648,77 +1696,84 @@ function RestaurantSection({ assignment }) {
         </div>
       ) : (
         <div className="fb-profile-grid" style={styles.profileGrid}>
-          <div style={styles.panel}>
-            <div style={styles.profileHeader}>
-              <div style={styles.profileAvatar}>
-                {getInitials(restaurant.name)}
-              </div>
-              <div>
-                <div style={styles.profileName}>{restaurant.name}</div>
-                <div style={styles.profileStatus}>
-                  <span style={styles.activeStatusDot} />
-                  Active FoodBridge restaurant
+          <div style={styles.pickupCardGroup}>
+            {withRestaurants.map((item) => {
+              const restaurant = item.restaurants
+              return (
+                <div key={item.id} style={styles.panel}>
+                  <div style={styles.profileHeader}>
+                    <div style={styles.profileAvatar}>
+                      {getInitials(restaurant.name)}
+                    </div>
+                    <div>
+                      <div style={styles.profileName}>{restaurant.name}</div>
+                      <div style={styles.profileStatus}>
+                        <span style={styles.activeStatusDot} />
+                        Active FoodBridge restaurant
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="fb-info-grid" style={styles.informationGrid}>
+                    <InformationItem
+                      label="Address"
+                      value={restaurant.address || 'Address not provided'}
+                    />
+                    <InformationItem
+                      label="Phone"
+                      value={restaurant.phone || 'Phone not provided'}
+                    />
+                    <InformationItem
+                      label="Email"
+                      value={restaurant.email || 'Email not provided'}
+                    />
+                    <InformationItem
+                      label="Pickup date"
+                      value={formatFullDate(item.assignment_date)}
+                    />
+                  </div>
+
+                  <div style={styles.assignmentActions}>
+                    {restaurant.phone && (
+                      <button
+                        type="button"
+                        style={styles.primaryButton}
+                        onClick={() => {
+                          window.location.href = `tel:${restaurant.phone}`
+                        }}
+                      >
+                        Call restaurant
+                      </button>
+                    )}
+                    {restaurant.address && (
+                      <button
+                        type="button"
+                        style={styles.secondaryButton}
+                        onClick={() =>
+                          window.open(
+                            `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              restaurant.address
+                            )}`,
+                            '_blank',
+                            'noopener,noreferrer'
+                          )
+                        }
+                      >
+                        View directions
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="fb-info-grid" style={styles.informationGrid}>
-              <InformationItem
-                label="Address"
-                value={restaurant.address || 'Address not provided'}
-              />
-              <InformationItem
-                label="Phone"
-                value={restaurant.phone || 'Phone not provided'}
-              />
-              <InformationItem
-                label="Email"
-                value={restaurant.email || 'Email not provided'}
-              />
-              <InformationItem
-                label="Pickup date"
-                value={formatFullDate(assignment.assignment_date)}
-              />
-            </div>
-
-            <div style={styles.assignmentActions}>
-              {restaurant.phone && (
-                <button
-                  type="button"
-                  style={styles.primaryButton}
-                  onClick={() => {
-                    window.location.href = `tel:${restaurant.phone}`
-                  }}
-                >
-                  Call restaurant
-                </button>
-              )}
-              {restaurant.address && (
-                <button
-                  type="button"
-                  style={styles.secondaryButton}
-                  onClick={() =>
-                    window.open(
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        restaurant.address
-                      )}`,
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                >
-                  View directions
-                </button>
-              )}
-            </div>
+              )
+            })}
           </div>
 
           <div style={styles.panel}>
             <PanelHeader eyebrow="Pickup checklist" title="Before collection" />
             <ChecklistItem
-              complete={Boolean(restaurant.address)}
+              complete={withRestaurants.some((item) => item.restaurants?.address)}
               title="Confirm location"
-              text="Check the restaurant address before departure."
+              text="Check each restaurant's address before departure."
             />
             <ChecklistItem
               complete={false}
@@ -1728,12 +1783,12 @@ function RestaurantSection({ assignment }) {
             <ChecklistItem
               complete={false}
               title="Review allergens"
-              text="Check allergen information before accepting the donation."
+              text="Check allergen information before accepting each donation."
             />
             <ChecklistItem
               complete={false}
               title="Confirm collection"
-              text="Mark the donation collected after pickup."
+              text="Mark each donation collected after pickup."
             />
           </div>
         </div>
@@ -2200,65 +2255,64 @@ function EmptyState({
 }
 
 function buildDashboardNotifications({
-  assignment,
-  donation,
+  todaysAssignments,
   nextAssignment,
   databaseNotifications,
 }) {
   const generated = []
 
-  if (assignment && !donation) {
-    generated.push({
-      id: 'waiting-for-listing',
-      icon: '□',
-      tone: 'information',
-      title: 'Waiting for surplus listing',
-      text: `${
-        assignment.restaurants?.name || "Today's restaurant"
-      } has not posted its available food yet.`,
-      time: 'Today',
-      read: true,
-    })
-  }
+  for (const item of todaysAssignments || []) {
+    const donation = item.donation
+    const restaurantName = item.restaurants?.name || 'A restaurant partner'
 
-  if (donation?.status === 'posted') {
-    generated.push({
-      id: 'response-required',
-      icon: '!',
-      tone: 'warning',
-      title: 'Donation response required',
-      text: `${
-        assignment?.restaurants?.name || 'A restaurant partner'
-      } posted ${donation.quantity || 0} portions. Review and respond.`,
-      time: 'Current pickup',
-      read: false,
-    })
-  }
+    if (!donation) {
+      generated.push({
+        id: `waiting-for-listing-${item.id}`,
+        icon: '□',
+        tone: 'information',
+        title: 'Waiting for surplus listing',
+        text: `${restaurantName} has not posted its available food yet.`,
+        time: 'Today',
+        read: true,
+      })
+      continue
+    }
 
-  if (['confirmed', 'accepted'].includes(donation?.status)) {
-    generated.push({
-      id: 'pickup-confirmed',
-      icon: '✓',
-      tone: 'success',
-      title: 'Pickup confirmed',
-      text: `Your shelter accepted the donation from ${
-        assignment?.restaurants?.name || 'the assigned restaurant'
-      }.`,
-      time: 'Current pickup',
-      read: true,
-    })
-  }
+    if (donation.status === 'posted') {
+      generated.push({
+        id: `response-required-${item.id}`,
+        icon: '!',
+        tone: 'warning',
+        title: 'Donation response required',
+        text: `${restaurantName} posted ${donation.quantity || 0} portions. Review and respond.`,
+        time: 'Current pickup',
+        read: false,
+      })
+    }
 
-  if (donation?.status === 'collected') {
-    generated.push({
-      id: 'pickup-collected',
-      icon: '✓',
-      tone: 'success',
-      title: 'Donation collected',
-      text: 'The restaurant can now complete the final handoff.',
-      time: 'Current pickup',
-      read: true,
-    })
+    if (['confirmed', 'accepted'].includes(donation.status)) {
+      generated.push({
+        id: `pickup-confirmed-${item.id}`,
+        icon: '✓',
+        tone: 'success',
+        title: 'Pickup confirmed',
+        text: `Your shelter accepted the donation from ${restaurantName}.`,
+        time: 'Current pickup',
+        read: true,
+      })
+    }
+
+    if (donation.status === 'collected') {
+      generated.push({
+        id: `pickup-collected-${item.id}`,
+        icon: '✓',
+        tone: 'success',
+        title: 'Donation collected',
+        text: `The handoff from ${restaurantName} can now be completed.`,
+        time: 'Current pickup',
+        read: true,
+      })
+    }
   }
 
   if (nextAssignment) {
@@ -3063,6 +3117,9 @@ const styles = {
     marginTop: 18,
   },
   largeColumn: {
+    minWidth: 0,
+  },
+  pickupCardGroup: {
     minWidth: 0,
   },
   smallColumn: {

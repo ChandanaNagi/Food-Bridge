@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { ensureTodaysRotation } from "../lib/rotation";
 import logo from "../assets/logo.png";
 
 export default function AdminDashboard() {
@@ -20,6 +21,10 @@ export default function AdminDashboard() {
     if (sessionError || !session?.user) { navigate("/"); return; }
     setAdminEmail(session.user.email || "Admin");
     const today = new Date().toISOString().split("T")[0];
+
+    // Self-healing rotation: fills in today's restaurant-shelter pairings
+    // if an admin hasn't (or hasn't yet) created them manually.
+    await ensureTodaysRotation();
 
     const [
       { data: assignmentRows },

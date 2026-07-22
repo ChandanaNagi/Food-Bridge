@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { ensureTodaysRotation } from '../lib/rotation'
 import logo from "../assets/logo.png";
 
 export default function RestaurantDashboard() {
@@ -62,6 +63,10 @@ export default function RestaurantDashboard() {
 
       setRestaurant(restaurantRow)
       const today = new Date().toISOString().split('T')[0]
+
+      // Self-healing rotation: fills in today's restaurant-shelter pairing
+      // if an admin hasn't (or hasn't yet) created one manually.
+      await ensureTodaysRotation()
 
       /*
         Load today's assignment.
