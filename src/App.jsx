@@ -25,6 +25,7 @@ function App() {
         <Route path="/shelter" element={<ShelterDashboard />} />
         <Route path="/shelter/organizations" element={<ShelterOrganizationQueue />} />
         <Route path="/shelter/donation/:id" element={<DonationDetail />} />
+        <Route path="/restaurant/donation/:id" element={<DonationDetail />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/strikes" element={<StrikeManagement />} />

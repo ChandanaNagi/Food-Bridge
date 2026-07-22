@@ -23,6 +23,7 @@ export default function DonationDetail() {
   const [showDeclineModal, setShowDeclineModal] = useState(false)
   const [declineReason, setDeclineReason] = useState('')
   const [otherReason, setOtherReason] = useState('')
+  const [viewerRole, setViewerRole] = useState(null)
 
   useEffect(() => {
     loadDonation()
@@ -45,6 +46,15 @@ export default function DonationDetail() {
         navigate('/')
         return
       }
+      // Figure out whether the viewer is a restaurant or a shelter, since
+      // only shelters should be able to accept/decline from this page.
+      const { data: shelterRow } = await supabase
+        .from('shelters')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle()
+
+      setViewerRole(shelterRow ? 'shelter' : 'restaurant')
 
       const { data: donationData, error: donationError } = await supabase
         .from('donations')
@@ -99,7 +109,7 @@ export default function DonationDetail() {
     }
   }, [status])
 
-  const canRespond = status === 'posted'
+  const canRespond = status === 'posted' && viewerRole === 'shelter'
   const estimatedMeals = Number(donation?.quantity) || 0
 
   const updateAssignmentStatus = async (newStatus) => {
@@ -203,7 +213,7 @@ export default function DonationDetail() {
     <div style={styles.page}>
       <header style={styles.header}>
         <div style={styles.headerInner}>
-          <button type="button" onClick={() => navigate('/shelter')} style={styles.backButton}>
+          <button type="button" onClick={() => navigate(viewerRole === 'restaurant' ? '/restaurant' : '/shelter')} style={styles.backButton}>
             ← Back to dashboard
           </button>
           <div style={styles.brand}>FoodBridge Detroit</div>

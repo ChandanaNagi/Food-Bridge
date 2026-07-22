@@ -1342,7 +1342,11 @@ function RecentHistoryCard({ history, onViewAll }) {
             </thead>
             <tbody>
               {history.slice(0, 5).map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  onClick={() => window.location.assign(`/shelter/donation/${item.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td style={styles.tableCellStrong}>
                     {item.assignments?.restaurants?.name || 'Restaurant'}
                   </td>
@@ -1637,7 +1641,11 @@ function HistorySection({ history }) {
               </thead>
               <tbody>
                 {filteredHistory.map((item) => (
-                  <tr key={item.id}>
+                  <tr
+                    key={item.id}
+                    onClick={() => window.location.assign(`/shelter/donation/${item.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td style={styles.tableCellStrong}>
                       {item.assignments?.restaurants?.name || 'Restaurant'}
                     </td>
