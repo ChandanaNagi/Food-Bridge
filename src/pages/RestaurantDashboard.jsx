@@ -16,6 +16,10 @@ export default function RestaurantDashboard() {
   const [completing, setCompleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [error, setError] = useState('')
+  const [showProfileRequestModal, setShowProfileRequestModal] = useState(false)
+  const [profileRequestForm, setProfileRequestForm] = useState({ name: '', email: '', address: '', phone: '' })
+  const [submittingProfileRequest, setSubmittingProfileRequest] = useState(false)
+  const [profileRequestMessage, setProfileRequestMessage] = useState('')
 
   useEffect(() => {
     loadDashboard()
@@ -1838,10 +1842,6 @@ function ClosuresPanel({ restaurantId }) {
   const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState('')
-  const [showProfileRequestModal, setShowProfileRequestModal] = useState(false)
-  const [profileRequestForm, setProfileRequestForm] = useState({ name: '', email: '', address: '', phone: '' })
-  const [submittingProfileRequest, setSubmittingProfileRequest] = useState(false)
-  const [profileRequestMessage, setProfileRequestMessage] = useState('')
   const [form, setForm] = useState({ closure_date: '', reason: '' })
 
   useEffect(() => {
