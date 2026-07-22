@@ -25,6 +25,10 @@ export default function ShelterDashboard() {
   const [loading, setLoading] = useState(true)
   const [responding, setResponding] = useState(false)
   const [error, setError] = useState('')
+  const [showProfileRequestModal, setShowProfileRequestModal] = useState(false)
+  const [profileRequestForm, setProfileRequestForm] = useState({ name: '', email: '', address: '', phone: '' })
+  const [submittingProfileRequest, setSubmittingProfileRequest] = useState(false)
+  const [profileRequestMessage, setProfileRequestMessage] = useState('')
 
   // Decline reason picker state
   const [showDeclineModal, setShowDeclineModal] = useState(false)
@@ -329,6 +333,55 @@ const openAcceptModal = () => {
     }
   }
 
+  const openProfileRequestModal = () => {
+    setProfileRequestForm({
+      name: shelter?.name || '',
+      email: shelter?.email || '',
+      address: shelter?.address || '',
+      phone: shelter?.phone || '',
+    })
+    setProfileRequestMessage('')
+    setShowProfileRequestModal(true)
+  }
+
+  const closeProfileRequestModal = () => {
+    if (submittingProfileRequest) return
+    setShowProfileRequestModal(false)
+  }
+
+  const submitProfileRequest = async (event) => {
+    event.preventDefault()
+
+    if (!shelter?.id) return
+
+    setSubmittingProfileRequest(true)
+    setProfileRequestMessage('')
+
+    try {
+      const { error: insertError } = await supabase
+        .from('profile_update_requests')
+        .insert({
+          organization_id: shelter.id,
+          organization_type: 'Shelter',
+          current_name: shelter.name,
+          requested_name: profileRequestForm.name.trim() || null,
+          requested_email: profileRequestForm.email.trim() || null,
+          requested_address: profileRequestForm.address.trim() || null,
+          requested_phone: profileRequestForm.phone.trim() || null,
+          status: 'Pending',
+        })
+
+      if (insertError) throw insertError
+
+      setProfileRequestMessage('Your request has been sent to an admin for review.')
+      setTimeout(() => setShowProfileRequestModal(false), 1500)
+    } catch (err) {
+      console.error('Profile request error:', err)
+      setProfileRequestMessage(err.message || 'The request could not be submitted.')
+    } finally {
+      setSubmittingProfileRequest(false)
+    }
+  }
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/')
@@ -621,6 +674,109 @@ const openAcceptModal = () => {
           )}
         </div>
       </main>
+      {showProfileRequestModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(19, 40, 31, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            zIndex: 1000,
+          }}
+          onMouseDown={closeProfileRequestModal}
+        >
+          <div
+            style={{
+              width: 'min(480px, 100%)',
+              background: '#FFFFFF',
+              borderRadius: 17,
+              padding: 24,
+              boxShadow: '0 20px 60px rgba(0,0,0,.24)',
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 5px', fontSize: 18, color: '#213A2B' }}>
+              Request profile update
+            </h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#748077' }}>
+              Suggest changes to your organization's info. An admin will review before anything changes.
+            </p>
+
+            {profileRequestMessage && (
+              <div style={{ marginBottom: 14, fontSize: 13, color: profileRequestMessage.includes('sent') ? '#166534' : '#991B1B' }}>
+                {profileRequestMessage}
+              </div>
+            )}
+
+            <form onSubmit={submitProfileRequest} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Organization name</span>
+                <input
+                  type="text"
+                  value={profileRequestForm.name}
+                  onChange={(e) => setProfileRequestForm({ ...profileRequestForm, name: e.target.value })}
+                  disabled={submittingProfileRequest}
+                  style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '11px 12px', fontSize: 13 }}
+                />
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Email address</span>
+                <input
+                  type="email"
+                  value={profileRequestForm.email}
+                  onChange={(e) => setProfileRequestForm({ ...profileRequestForm, email: e.target.value })}
+                  disabled={submittingProfileRequest}
+                  style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '11px 12px', fontSize: 13 }}
+                />
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Phone number</span>
+                <input
+                  type="text"
+                  value={profileRequestForm.phone}
+                  onChange={(e) => setProfileRequestForm({ ...profileRequestForm, phone: e.target.value })}
+                  disabled={submittingProfileRequest}
+                  style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '11px 12px', fontSize: 13 }}
+                />
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#36423A' }}>Address</span>
+                <input
+                  type="text"
+                  value={profileRequestForm.address}
+                  onChange={(e) => setProfileRequestForm({ ...profileRequestForm, address: e.target.value })}
+                  disabled={submittingProfileRequest}
+                  style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '11px 12px', fontSize: 13 }}
+                />
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={closeProfileRequestModal}
+                  disabled={submittingProfileRequest}
+                  style={styles.secondaryButton}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingProfileRequest}
+                  style={styles.primaryButton}
+                >
+                  {submittingProfileRequest ? 'Submitting...' : 'Submit request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showDeclineModal && (
         <div
@@ -1731,7 +1887,7 @@ function ProfileSection({ shelter }) {
           </p>
         </div>
 
-        <button type="button" style={styles.secondaryButton}>
+        <button type="button" style={styles.secondaryButton} onClick={openProfileRequestModal}>
           Request profile update
         </button>
       </div>

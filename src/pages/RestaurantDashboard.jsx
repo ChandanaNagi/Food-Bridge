@@ -160,6 +160,55 @@ export default function RestaurantDashboard() {
     }
   }
 
+  const openProfileRequestModal = () => {
+    setProfileRequestForm({
+      name: restaurant?.name || '',
+      email: restaurant?.email || '',
+      address: restaurant?.address || '',
+      phone: restaurant?.phone || '',
+    })
+    setProfileRequestMessage('')
+    setShowProfileRequestModal(true)
+  }
+
+  const closeProfileRequestModal = () => {
+    if (submittingProfileRequest) return
+    setShowProfileRequestModal(false)
+  }
+
+  const submitProfileRequest = async (event) => {
+    event.preventDefault()
+
+    if (!restaurant?.id) return
+
+    setSubmittingProfileRequest(true)
+    setProfileRequestMessage('')
+
+    try {
+      const { error: insertError } = await supabase
+        .from('profile_update_requests')
+        .insert({
+          organization_id: restaurant.id,
+          organization_type: 'Restaurant',
+          current_name: restaurant.name,
+          requested_name: profileRequestForm.name.trim() || null,
+          requested_email: profileRequestForm.email.trim() || null,
+          requested_address: profileRequestForm.address.trim() || null,
+          requested_phone: profileRequestForm.phone.trim() || null,
+          status: 'Pending',
+        })
+
+      if (insertError) throw insertError
+
+      setProfileRequestMessage('Your request has been sent to an admin for review.')
+      setTimeout(() => setShowProfileRequestModal(false), 1500)
+    } catch (err) {
+      console.error('Profile request error:', err)
+      setProfileRequestMessage(err.message || 'The request could not be submitted.')
+    } finally {
+      setSubmittingProfileRequest(false)
+    }
+  }
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     navigate('/')
@@ -1575,7 +1624,7 @@ function ProfileSection({ restaurant }) {
           </p>
         </div>
 
-        <button style={styles.secondaryButton}>
+        <button style={styles.secondaryButton} onClick={openProfileRequestModal}>
           Request profile update
         </button>
       </div>
@@ -1686,6 +1735,10 @@ function ClosuresPanel({ restaurantId }) {
   const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState('')
+  const [showProfileRequestModal, setShowProfileRequestModal] = useState(false)
+  const [profileRequestForm, setProfileRequestForm] = useState({ name: '', email: '', address: '', phone: '' })
+  const [submittingProfileRequest, setSubmittingProfileRequest] = useState(false)
+  const [profileRequestMessage, setProfileRequestMessage] = useState('')
   const [form, setForm] = useState({ closure_date: '', reason: '' })
 
   useEffect(() => {
