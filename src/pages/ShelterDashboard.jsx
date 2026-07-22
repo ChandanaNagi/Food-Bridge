@@ -670,7 +670,7 @@ const openAcceptModal = () => {
           )}
 
           {activeSection === 'profile' && (
-            <ProfileSection shelter={shelter} />
+            <ProfileSection shelter={shelter} onRequestUpdate={openProfileRequestModal} />
           )}
         </div>
       </main>
@@ -1876,7 +1876,7 @@ function NotificationsSection({ notifications, onMarkAllRead }) {
   )
 }
 
-function ProfileSection({ shelter }) {
+function ProfileSection({ shelter, onRequestUpdate }) {
   return (
     <div>
       <div style={styles.sectionToolbar}>
@@ -1887,7 +1887,7 @@ function ProfileSection({ shelter }) {
           </p>
         </div>
 
-        <button type="button" style={styles.secondaryButton} onClick={openProfileRequestModal}>
+        <button type="button" style={styles.secondaryButton} onClick={onRequestUpdate}>
           Request profile update
         </button>
       </div>
