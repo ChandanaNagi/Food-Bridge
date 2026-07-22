@@ -322,7 +322,7 @@ if (notificationError) {
           label="Safe until (expiration)"
           value={form.safe_until}
           onChange={setField('safe_until')}
-          placeholder="e.g. 9:00 PM"
+          placeholder="e.g. 9:00 PM, 3 days, or Fri 6:00 PM"
           disabled={!assignment || submitting}
         />
 
