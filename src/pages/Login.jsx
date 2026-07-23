@@ -182,10 +182,9 @@ try {
 setSignupForm({ name: "", email: "", password: "", type: "Shelter" });
     setLoading(false);
     setSuccessMessage(
-      "Account created! An admin will review your details, and you'll be able to " +
-      "log in once approved. You'll receive an email when that happens — please " +
-      "check your spam/junk folder if you don't see it in your inbox."
-    );
+  "Account created! An admin will review your details, and you'll be able to " +
+  "log in once approved. Please check back soon."
+);
     setMode("login");
   };
 
