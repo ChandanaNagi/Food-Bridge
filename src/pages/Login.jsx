@@ -158,12 +158,28 @@ export default function Login() {
     await supabase.auth.signOut();
 
     if (insertError) {
-      setError(`Account created, but saving your details failed: ${insertError.message}`);
-      setLoading(false);
-      return;
-    }
+  setError(`Account created, but saving your details failed: ${insertError.message}`);
+  setLoading(false);
+  return;
+}
 
-    setSignupForm({ name: "", email: "", password: "", type: "Shelter" });
+// Let the admin know a new account is waiting for review — don't block
+// signup if the alert email fails to send.
+try {
+  await fetch("/api/send-admin-alert", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: signupForm.name,
+      email: signupForm.email,
+      type: signupForm.type,
+    }),
+  });
+} catch (alertError) {
+  console.error("Admin alert failed to send:", alertError);
+}
+
+setSignupForm({ name: "", email: "", password: "", type: "Shelter" });
     setLoading(false);
     setSuccessMessage(
       "Account created! An admin will review your details, and you'll be able to " +
