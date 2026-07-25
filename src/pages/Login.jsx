@@ -119,9 +119,10 @@ export default function Login() {
     }
 
     setLoading(true);
+    const cleanEmail = signupForm.email.trim().toLowerCase();
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: signupForm.email,
+      email: cleanEmail,
       password: signupForm.password,
     });
 
@@ -149,7 +150,7 @@ export default function Login() {
     const { error: insertError } = await supabase.from(table).insert({
       id: newUserId,
       name: signupForm.name,
-      email: signupForm.email,
+      email: cleanEmail,
       status: "Pending",
     });
 
@@ -171,7 +172,7 @@ try {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: signupForm.name,
-      email: signupForm.email,
+      email: cleanEmail,
       type: signupForm.type,
     }),
   });
