@@ -275,6 +275,69 @@ export default function UserManagement() {
     }
   };
 
+  const handleDeleteUser = async (user) => {
+    const confirmed = window.confirm(
+      `Delete ${user.name || "this organization"} (${user.email})?\n\n` +
+        "This permanently removes their profile and cannot be undone. " +
+        "Note: their login will still exist in Supabase Authentication " +
+        "and should be removed there separately."
+    );
+
+    if (!confirmed) return;
+
+    const actionKey = `${user.type}-${user.id}`;
+    const table = user.type === "Restaurant" ? "restaurants" : "shelters";
+
+    setProcessingId(actionKey);
+    setMessage({ type: "", text: "" });
+
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      const {
+        data: { user: adminUser },
+      } = await supabase.auth.getUser();
+
+      const { error: auditError } = await supabase.from("audit_logs").insert({
+        admin_email: adminUser?.email || "Unknown admin",
+        action: "Deleted user account",
+        target_name: user.name,
+        target_type: user.type,
+        details: `${user.type} profile removed from the platform.`,
+      });
+
+      if (auditError) {
+        console.error("Failed to write audit log:", auditError);
+      }
+
+      setUsers((currentUsers) =>
+        currentUsers.filter(
+          (currentUser) =>
+            !(currentUser.id === user.id && currentUser.type === user.type)
+        )
+      );
+
+      setMessage({
+        type: "success",
+        text: `${user.name || "The organization"} was deleted.`,
+      });
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error.message || `Unable to delete ${user.name}.`,
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleAddUser = async (event) => {
     event.preventDefault();
 
@@ -848,6 +911,15 @@ export default function UserManagement() {
                                 Decline
                               </button>
                             )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(user)}
+                              style={styles.deleteButton}
+                              disabled={isProcessing}
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1028,6 +1100,7 @@ const styles = { page: { minHeight: "100vh", background: "#F4F8F4", color: "#172
  approveButton: { background: "#2C5F2D", color: "#FFFFFF", border: "none", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
  suspendButton: { background: "#FFF7ED", color: "#9A3412", border: "1px solid #FED7AA", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
  declineButton: { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
+ deleteButton: { background: "#991B1B", color: "#FFFFFF", border: "1px solid #7F1D1D", borderRadius: 7, padding: "7px 11px", cursor: "pointer", fontSize: 11, fontWeight: 700, },
  editButton: {
     background: "#EFF6FF",
     color: "#1D4ED8",
