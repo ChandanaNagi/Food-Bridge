@@ -94,12 +94,20 @@ export default function Login() {
 
     setLoading(false);
 
+    const ADMIN_EMAILS = ["admin@test.com"];
+
     if (shelterRow) {
       navigate("/shelter");
     } else if (restaurantRow) {
       navigate("/restaurant");
-    } else {
+    } else if (ADMIN_EMAILS.includes(userEmail)) {
       navigate("/admin");
+    } else {
+      await supabase.auth.signOut();
+      setError(
+        "This account isn't set up correctly (no matching profile was found). " +
+        "Please contact an administrator."
+      );
     }
   };
 
@@ -119,10 +127,9 @@ export default function Login() {
     }
 
     setLoading(true);
-    const cleanEmail = signupForm.email.trim().toLowerCase();
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: cleanEmail,
+      email: signupForm.email,
       password: signupForm.password,
     });
 
@@ -150,7 +157,7 @@ export default function Login() {
     const { error: insertError } = await supabase.from(table).insert({
       id: newUserId,
       name: signupForm.name,
-      email: cleanEmail,
+      email: signupForm.email,
       status: "Pending",
     });
 
@@ -172,7 +179,7 @@ try {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: signupForm.name,
-      email: cleanEmail,
+      email: signupForm.email,
       type: signupForm.type,
     }),
   });
