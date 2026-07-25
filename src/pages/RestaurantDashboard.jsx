@@ -21,6 +21,12 @@ export default function RestaurantDashboard() {
   const [profileRequestForm, setProfileRequestForm] = useState({ name: '', email: '', address: '', phone: '' })
   const [submittingProfileRequest, setSubmittingProfileRequest] = useState(false)
   const [profileRequestMessage, setProfileRequestMessage] = useState('')
+  const [nowTick, setNowTick] = useState(() => Date.now())
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setNowTick(Date.now()), 30000)
+    return () => clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     loadDashboard()
@@ -524,6 +530,7 @@ export default function RestaurantDashboard() {
               canPostSurplus={canPostSurplus}
               showDonationCard={showDonationCard}
               completing={completing}
+              now={nowTick}
               onPost={() => navigate('/restaurant/post')}
               onComplete={handleMarkComplete}
               onOpenSection={openSection}
@@ -537,6 +544,7 @@ export default function RestaurantDashboard() {
               history={history}
               canPostSurplus={canPostSurplus}
               completing={completing}
+              now={nowTick}
               onPost={() => navigate('/restaurant/post')}
               onComplete={handleMarkComplete}
             />
@@ -687,6 +695,7 @@ function DashboardSection({
   canPostSurplus,
   showDonationCard,
   completing,
+  now,
   onPost,
   onComplete,
   onOpenSection,
@@ -785,7 +794,7 @@ function DashboardSection({
           )}
 
           {showDonationCard && (
-            <DonationDetailsCard donation={donation} />
+            <DonationDetailsCard donation={donation} now={now} />
           )}
 
           <RecentHistoryCard
@@ -1003,7 +1012,9 @@ function CurrentAssignmentCard({
   )
 }
 
-function DonationDetailsCard({ donation }) {
+function DonationDetailsCard({ donation, now }) {
+  const deadlineInfo = getResponseDeadlineInfo(donation, now)
+
   return (
     <div style={styles.panel}>
       <PanelHeader
@@ -1015,6 +1026,20 @@ function DonationDetailsCard({ donation }) {
           </span>
         }
       />
+
+      {deadlineInfo && (
+        <div
+          style={
+            deadlineInfo.overdue
+              ? styles.deadlineBannerOverdue
+              : styles.deadlineBanner
+          }
+        >
+          {deadlineInfo.overdue
+            ? `The 1-hour response window has passed (was due ${deadlineInfo.deadlineLabel}). You may want to follow up with the shelter.`
+            : `Shelter response expected within 1 hour — by ${deadlineInfo.deadlineLabel} (${deadlineInfo.minutesLeft} min left).`}
+        </div>
+      )}
 
       <div className="fb-detail-grid" style={styles.detailGrid}>
         {donation.pickup_contact_name && (
@@ -1308,6 +1333,7 @@ function ActiveDonationsSection({
   history,
   canPostSurplus,
   completing,
+  now,
   onPost,
   onComplete,
 }) {
@@ -1345,7 +1371,7 @@ function ActiveDonationsSection({
             completing={completing}
           />
 
-          <DonationDetailsCard donation={donation} />
+          <DonationDetailsCard donation={donation} now={now} />
         </>
       ) : (
         <div style={styles.panel}>
@@ -2581,6 +2607,33 @@ function formatDateTime(value) {
   })
 }
 
+// Shows the restaurant a live 1-hour countdown for the shelter to respond
+// to a newly posted donation. Purely informational for now — nothing
+// currently auto-expires the donation or notifies anyone when time runs out.
+const RESPONSE_WINDOW_MS = 60 * 60 * 1000
+
+function getResponseDeadlineInfo(donation, now) {
+  if (!donation || donation.status !== 'posted' || !donation.posted_at) {
+    return null
+  }
+
+  const postedDate = parseDate(donation.posted_at)
+  if (!postedDate || Number.isNaN(postedDate.getTime())) return null
+
+  const deadlineMs = postedDate.getTime() + RESPONSE_WINDOW_MS
+  const nowMs = now || Date.now()
+  const msLeft = deadlineMs - nowMs
+
+  return {
+    overdue: msLeft <= 0,
+    minutesLeft: Math.max(0, Math.ceil(msLeft / 60000)),
+    deadlineLabel: new Date(deadlineMs).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+  }
+}
+
 function getMonth(value) {
   const date = parseDate(value)
   if (!date || Number.isNaN(date.getTime())) return ''
@@ -3441,6 +3494,28 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 10,
+  },
+
+  deadlineBanner: {
+    background: '#EFF6FF',
+    color: '#1D4ED8',
+    border: '1px solid #BFDBFE',
+    borderRadius: 9,
+    padding: '10px 13px',
+    fontSize: 12,
+    fontWeight: 600,
+    marginBottom: 14,
+  },
+
+  deadlineBannerOverdue: {
+    background: '#FEF2F2',
+    color: '#991B1B',
+    border: '1px solid #FECACA',
+    borderRadius: 9,
+    padding: '10px 13px',
+    fontSize: 12,
+    fontWeight: 600,
+    marginBottom: 14,
   },
 
   detailBox: {
