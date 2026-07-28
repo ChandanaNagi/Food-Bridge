@@ -78,7 +78,8 @@ export async function ensureTodaysRotation() {
       supabase
         .from('restaurant_closures')
         .select('restaurant_id')
-        .eq('closure_date', today),
+        .lte('closure_date', today)
+        .gte('end_date', today),
     ])
 
     if (restaurantsError) throw restaurantsError

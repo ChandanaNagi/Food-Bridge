@@ -94,14 +94,17 @@ export default function AssignmentManagement() {
         return;
       }
 // Block scheduling on a date the restaurant has marked as a closure/holiday.
-      const { data: closure, error: closureError } = await supabase
+      const { data: closureMatches, error: closureError } = await supabase
         .from("restaurant_closures")
         .select("id, reason")
         .eq("restaurant_id", form.restaurant_id)
-        .eq("closure_date", form.assignment_date)
-        .maybeSingle();
+        .lte("closure_date", form.assignment_date)
+        .gte("end_date", form.assignment_date)
+        .limit(1);
 
       if (closureError) throw closureError;
+
+      const closure = closureMatches?.[0];
 
       if (closure) {
         setMessage({

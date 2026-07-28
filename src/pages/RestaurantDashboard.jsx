@@ -1934,7 +1934,7 @@ function ClosuresPanel({ restaurantId }) {
   const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ closure_date: '', reason: '' })
+  const [form, setForm] = useState({ closure_date: '', end_date: '', reason: '' })
 
   useEffect(() => {
     loadClosures()
@@ -1965,7 +1965,14 @@ function ClosuresPanel({ restaurantId }) {
     setError('')
 
     if (!form.closure_date) {
-      setError('Please choose a date.')
+      setError('Please choose a start date.')
+      return
+    }
+
+    const endDate = form.end_date || form.closure_date
+
+    if (endDate < form.closure_date) {
+      setError('End date must be on or after the start date.')
       return
     }
 
@@ -1974,6 +1981,7 @@ function ClosuresPanel({ restaurantId }) {
     const { error: insertError } = await supabase.from('restaurant_closures').insert({
       restaurant_id: restaurantId,
       closure_date: form.closure_date,
+      end_date: endDate,
       reason: form.reason.trim() || null,
     })
 
@@ -1981,11 +1989,11 @@ function ClosuresPanel({ restaurantId }) {
       console.error('Add closure error:', insertError)
       setError(
         insertError.code === '23505'
-          ? 'That date is already marked as a closure.'
+          ? 'That date range overlaps an existing closure.'
           : insertError.message || 'The closure date could not be added.'
       )
     } else {
-      setForm({ closure_date: '', reason: '' })
+      setForm({ closure_date: '', end_date: '', reason: '' })
       await loadClosures()
     }
 
@@ -2012,7 +2020,7 @@ function ClosuresPanel({ restaurantId }) {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const upcoming = closures.filter((c) => c.closure_date >= today)
+  const upcoming = closures.filter((c) => (c.end_date || c.closure_date) >= today)
 
   return (
     <div style={{ ...styles.panel, marginTop: 20 }}>
@@ -2034,11 +2042,32 @@ function ClosuresPanel({ restaurantId }) {
 
       <form onSubmit={handleAdd} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18, alignItems: 'flex-end' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#36423A' }}>Date</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#36423A' }}>Start date</span>
           <input
             type="date"
             value={form.closure_date}
-            onChange={(e) => setForm({ ...form, closure_date: e.target.value })}
+            onChange={(e) => {
+              const closure_date = e.target.value
+              setForm((prev) => ({
+                ...prev,
+                closure_date,
+                // Keep end date valid if it's now before the new start date
+                end_date: prev.end_date && prev.end_date < closure_date ? closure_date : prev.end_date,
+              }))
+            }}
+            disabled={adding}
+            style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '9px 11px', fontSize: 13 }}
+          />
+        </label>
+
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#36423A' }}>End date</span>
+          <input
+            type="date"
+            value={form.end_date}
+            min={form.closure_date || undefined}
+            placeholder={form.closure_date}
+            onChange={(e) => setForm({ ...form, end_date: e.target.value })}
             disabled={adding}
             style={{ border: '1px solid #CBD8CC', borderRadius: 9, padding: '9px 11px', fontSize: 13 }}
           />
@@ -2082,7 +2111,9 @@ function ClosuresPanel({ restaurantId }) {
           >
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#243229' }}>
-                {closure.closure_date}
+                {closure.end_date && closure.end_date !== closure.closure_date
+                  ? `${closure.closure_date} – ${closure.end_date}`
+                  : closure.closure_date}
               </div>
               {closure.reason && (
                 <div style={{ fontSize: 11, color: '#748077', marginTop: 2 }}>
