@@ -152,6 +152,13 @@ export default function RestaurantDashboard() {
   const handleMarkComplete = async () => {
     if (!donation) return
 
+    if (donation.status !== 'collected') {
+      setError(
+        'The shelter needs to mark this pickup collected before you can complete the handoff.'
+      )
+      return
+    }
+
     try {
       setCompleting(true)
       setError('')
@@ -163,6 +170,7 @@ export default function RestaurantDashboard() {
           handoff_completed_at: new Date().toISOString(),
         })
         .eq('id', donation.id)
+        .eq('status', 'collected')
 
       if (updateError) throw updateError
 
@@ -932,19 +940,17 @@ function CurrentAssignmentCard({
               </button>
             )}
 
-            {donation &&
-              donation.status !== 'completed' &&
-              donation.status !== 'declined' && (
-                <button
-                  style={styles.primaryButton}
-                  onClick={onComplete}
-                  disabled={completing}
-                >
-                  {completing
-                    ? 'Updating handoff...'
-                    : 'Mark handoff complete'}
-                </button>
-              )}
+            {donation && donation.status === 'collected' && (
+              <button
+                style={styles.primaryButton}
+                onClick={onComplete}
+                disabled={completing}
+              >
+                {completing
+                  ? 'Updating handoff...'
+                  : 'Mark handoff complete'}
+              </button>
+            )}
 
             <button
   style={styles.secondaryButton}
@@ -964,18 +970,21 @@ function CurrentAssignmentCard({
 </button>
           </div>
 
-          {donation?.status === 'posted' && (
+          {['posted', 'confirmed', 'accepted'].includes(donation?.status) && (
             <div style={styles.successNotice}>
               <div style={styles.noticeIcon}>✓</div>
 
               <div>
                 <div style={styles.noticeTitle}>
-                  Donation posted successfully
+                  {donation.status === 'posted'
+                    ? 'Donation posted successfully'
+                    : 'Pickup confirmed by shelter'}
                 </div>
 
                 <div style={styles.noticeText}>
-                  {assignment.shelters?.name} has been notified and can
-                  respond from its shelter portal.
+                  {donation.status === 'posted'
+                    ? `${assignment.shelters?.name} has been notified and can respond from its shelter portal.`
+                    : 'Waiting for the shelter to mark the pickup collected before you can complete the handoff.'}
                 </div>
               </div>
             </div>
