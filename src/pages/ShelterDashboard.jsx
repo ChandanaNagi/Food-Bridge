@@ -2432,11 +2432,18 @@ function getInitials(name) {
 function parseDate(value) {
   if (!value) return null
 
-  if (
-    typeof value === 'string' &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value)
-  ) {
-    return new Date(`${value}T00:00:00`)
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return new Date(`${value}T00:00:00`)
+    }
+
+    // Supabase/Postgres timestamps with no timezone designator (no Z or
+    // +hh:mm offset) are stored in UTC. Without this, the browser assumes
+    // they're already in local time, throwing every deadline/time display
+    // off by the user's UTC offset.
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(value)) {
+      return new Date(`${value.replace(' ', 'T')}Z`)
+    }
   }
 
   return new Date(value)
