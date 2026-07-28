@@ -163,12 +163,20 @@ export default function RestaurantDashboard() {
       setCompleting(true)
       setError('')
 
+      const shelterAlreadyConfirmed = Boolean(donation.shelter_confirmed_at)
+
+      const updatePayload = {
+        restaurant_confirmed_at: new Date().toISOString(),
+      }
+
+      if (shelterAlreadyConfirmed) {
+        updatePayload.status = 'completed'
+        updatePayload.handoff_completed_at = new Date().toISOString()
+      }
+
       const { error: updateError } = await supabase
         .from('donations')
-        .update({
-          status: 'completed',
-          handoff_completed_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', donation.id)
         .eq('status', 'collected')
 
@@ -940,17 +948,19 @@ function CurrentAssignmentCard({
               </button>
             )}
 
-            {donation && donation.status === 'collected' && (
-              <button
-                style={styles.primaryButton}
-                onClick={onComplete}
-                disabled={completing}
-              >
-                {completing
-                  ? 'Updating handoff...'
-                  : 'Mark handoff complete'}
-              </button>
-            )}
+            {donation &&
+              donation.status === 'collected' &&
+              !donation.restaurant_confirmed_at && (
+                <button
+                  style={styles.primaryButton}
+                  onClick={onComplete}
+                  disabled={completing}
+                >
+                  {completing
+                    ? 'Updating handoff...'
+                    : 'Mark handoff complete'}
+                </button>
+              )}
 
             <button
   style={styles.secondaryButton}
@@ -985,6 +995,34 @@ function CurrentAssignmentCard({
                   {donation.status === 'posted'
                     ? `${assignment.shelters?.name} has been notified and can respond from its shelter portal.`
                     : 'Waiting for the shelter to mark the pickup collected before you can complete the handoff.'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {donation?.status === 'collected' && !donation.restaurant_confirmed_at && (
+            <div style={styles.successNotice}>
+              <div style={styles.noticeIcon}>✓</div>
+
+              <div>
+                <div style={styles.noticeTitle}>Pickup collected</div>
+                <div style={styles.noticeText}>
+                  Confirm the handoff once you've verified everything was
+                  picked up.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {donation?.status === 'collected' && donation.restaurant_confirmed_at && (
+            <div style={styles.successNotice}>
+              <div style={styles.noticeIcon}>✓</div>
+
+              <div>
+                <div style={styles.noticeTitle}>You confirmed the handoff</div>
+                <div style={styles.noticeText}>
+                  Waiting for the shelter to confirm before this is marked
+                  completed.
                 </div>
               </div>
             </div>

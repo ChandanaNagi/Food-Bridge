@@ -329,6 +329,49 @@ const openAcceptModal = (donation, restaurantName = '') => {
     }
   }
 
+  const handleConfirmComplete = async (donation) => {
+    if (!donation) return
+
+    if (donation.status !== 'collected') {
+      setError(
+        'This pickup needs to be marked collected before you can confirm the handoff.'
+      )
+      return
+    }
+
+    try {
+      setResponding(true)
+      setError('')
+
+      const restaurantAlreadyConfirmed = Boolean(
+        donation.restaurant_confirmed_at
+      )
+
+      const updatePayload = {
+        shelter_confirmed_at: new Date().toISOString(),
+      }
+
+      if (restaurantAlreadyConfirmed) {
+        updatePayload.status = 'completed'
+        updatePayload.handoff_completed_at = new Date().toISOString()
+      }
+
+      const { error: updateError } = await supabase
+        .from('donations')
+        .update(updatePayload)
+        .eq('id', donation.id)
+        .eq('status', 'collected')
+
+      if (updateError) throw updateError
+      await loadDashboard()
+    } catch (err) {
+      console.error('Confirm handoff error:', err)
+      setError(err.message || 'The handoff could not be confirmed.')
+    } finally {
+      setResponding(false)
+    }
+  }
+
   const markAllRead = async () => {
     if (!shelter) return
 
@@ -659,6 +702,7 @@ const openAcceptModal = (donation, restaurantName = '') => {
               onAccept={openAcceptModal}
               onDecline={openDeclineModal}
               onCollected={handleMarkCollected}
+              onConfirmComplete={handleConfirmComplete}
               onOpenSection={openSection}
             />
           )}
@@ -670,6 +714,7 @@ const openAcceptModal = (donation, restaurantName = '') => {
               onAccept={openAcceptModal}
               onDecline={openDeclineModal}
               onCollected={handleMarkCollected}
+              onConfirmComplete={handleConfirmComplete}
             />
           )}
 
@@ -934,6 +979,7 @@ function DashboardSection({
   onAccept,
   onDecline,
   onCollected,
+  onConfirmComplete,
   onOpenSection,
 }) {
   return (
@@ -1013,6 +1059,7 @@ function DashboardSection({
             onAccept={onAccept}
             onDecline={onDecline}
             onCollected={onCollected}
+            onConfirmComplete={onConfirmComplete}
           />
 
           <RecentHistoryCard
@@ -1052,6 +1099,7 @@ function CurrentPickupSection({
   onAccept,
   onDecline,
   onCollected,
+  onConfirmComplete,
 }) {
   return (
     <div>
@@ -1071,12 +1119,20 @@ function CurrentPickupSection({
         onAccept={onAccept}
         onDecline={onDecline}
         onCollected={onCollected}
+        onConfirmComplete={onConfirmComplete}
       />
     </div>
   )
 }
 
-function CurrentPickupList({ assignments, responding, onAccept, onDecline, onCollected }) {
+function CurrentPickupList({
+  assignments,
+  responding,
+  onAccept,
+  onDecline,
+  onCollected,
+  onConfirmComplete,
+}) {
   if (!assignments || assignments.length === 0) {
     return (
       <div style={styles.panel}>
@@ -1101,6 +1157,7 @@ function CurrentPickupList({ assignments, responding, onAccept, onDecline, onCol
             onAccept={() => onAccept(item.donation, item.restaurants?.name)}
             onDecline={() => onDecline(item.donation, item.restaurants?.name)}
             onCollected={() => onCollected(item.donation)}
+            onConfirmComplete={() => onConfirmComplete(item.donation)}
           />
 
           {item.donation && item.donation.status !== 'declined' && (
@@ -1119,6 +1176,7 @@ function CurrentPickupCard({
   onAccept,
   onDecline,
   onCollected,
+  onConfirmComplete,
 }) {
   const restaurant = assignment?.restaurants
 
@@ -1188,6 +1246,11 @@ function CurrentPickupCard({
               label="Collected"
               complete={['collected', 'completed'].includes(donation?.status)}
             />
+            <ProgressLine complete={donation?.status === 'completed'} />
+            <ProgressStep
+              label="Completed"
+              complete={donation?.status === 'completed'}
+            />
           </div>
 
           {!donation && (
@@ -1247,13 +1310,34 @@ function CurrentPickupCard({
             </div>
           )}
 
-          {donation?.status === 'collected' && (
+          {donation?.status === 'collected' && !donation.shelter_confirmed_at && (
+            <div style={styles.successNotice}>
+              <div style={styles.noticeIcon}>✓</div>
+              <div style={{ flex: 1 }}>
+                <div style={styles.noticeTitle}>Pickup collected</div>
+                <div style={styles.noticeText}>
+                  Confirm the handoff once everything checks out.
+                </div>
+              </div>
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={onConfirmComplete}
+                disabled={responding}
+              >
+                {responding ? 'Updating...' : 'Mark complete'}
+              </button>
+            </div>
+          )}
+
+          {donation?.status === 'collected' && donation.shelter_confirmed_at && (
             <div style={styles.successNotice}>
               <div style={styles.noticeIcon}>✓</div>
               <div>
-                <div style={styles.noticeTitle}>Pickup collected</div>
+                <div style={styles.noticeTitle}>You confirmed the handoff</div>
                 <div style={styles.noticeText}>
-                  The restaurant can now confirm the final handoff.
+                  Waiting for the restaurant to confirm before this is marked
+                  completed.
                 </div>
               </div>
             </div>
