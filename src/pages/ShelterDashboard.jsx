@@ -343,26 +343,29 @@ const openAcceptModal = (donation, restaurantName = '') => {
       setResponding(true)
       setError('')
 
-      const restaurantAlreadyConfirmed = Boolean(
-        donation.restaurant_confirmed_at
-      )
-
-      const updatePayload = {
-        shelter_confirmed_at: new Date().toISOString(),
-      }
-
-      if (restaurantAlreadyConfirmed) {
-        updatePayload.status = 'completed'
-        updatePayload.handoff_completed_at = new Date().toISOString()
-      }
-
-      const { error: updateError } = await supabase
+      const { data: updated, error: updateError } = await supabase
         .from('donations')
-        .update(updatePayload)
+        .update({ shelter_confirmed_at: new Date().toISOString() })
         .eq('id', donation.id)
         .eq('status', 'collected')
+        .select('restaurant_confirmed_at')
+        .single()
 
       if (updateError) throw updateError
+
+      if (updated?.restaurant_confirmed_at) {
+        const { error: completeError } = await supabase
+          .from('donations')
+          .update({
+            status: 'completed',
+            handoff_completed_at: new Date().toISOString(),
+          })
+          .eq('id', donation.id)
+          .eq('status', 'collected')
+
+        if (completeError) throw completeError
+      }
+
       await loadDashboard()
     } catch (err) {
       console.error('Confirm handoff error:', err)
