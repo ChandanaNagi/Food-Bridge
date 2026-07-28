@@ -44,7 +44,17 @@ export default function PostSurplus() {
       String(now.getDate()).padStart(2, '0'),
     ].join('-')
   }
+const getLocalDateTimeString = () => {
+  const now = new Date()
 
+  return [
+    getLocalDateString(),
+    'T',
+    String(now.getHours()).padStart(2, '0'),
+    ':',
+    String(now.getMinutes()).padStart(2, '0'),
+  ].join('')
+}
   const loadRestaurantAndAssignment = async () => {
     setPageLoading(true)
     setError('')
@@ -311,12 +321,13 @@ if (notificationError) {
         
 
         <Field
-          label="Safe until (expiration)"
-          value={form.safe_until}
-          onChange={setField('safe_until')}
-          placeholder="e.g. 9:00 PM, 3 days, or Fri 6:00 PM"
-          disabled={!assignment || submitting}
-        />
+  label="Safe until (expiration)"
+  value={form.safe_until}
+  onChange={setField('safe_until')}
+  type="datetime-local"
+  min={getLocalDateTimeString()}
+  disabled={!assignment || submitting}
+/>
 
         <Field
           label="Temperature requirement"

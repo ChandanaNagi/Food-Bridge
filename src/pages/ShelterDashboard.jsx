@@ -1345,9 +1345,9 @@ function DonationDetailsCard({ donation }) {
         />
         
         <DetailBox
-          label="Safe until"
-          value={donation.safe_until || 'Not provided'}
-        />
+  label="Safe until"
+  value={donation.safe_until ? formatDateTime(donation.safe_until) : 'Not provided'}
+/>
         <DetailBox
           label="Temperature"
           value={donation.temperature_requirement || 'Not provided'}
