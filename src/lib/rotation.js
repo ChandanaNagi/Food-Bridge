@@ -148,3 +148,85 @@ export async function ensureTodaysRotation() {
     return { created: 0, skipped: 0, error: err }
   }
 }
+
+/**
+ * Reassigns an assignment to a different approved shelter after the
+ * originally-assigned shelter declines a donation.
+ *
+ * Preference order for the replacement shelter:
+ *  1. An approved shelter with no assignment at all for that date
+ *     ("free" today).
+ *  2. If every other approved shelter already has an assignment that
+ *     day, fall back to any approved shelter other than the one that
+ *     just declined (even if it's already paired with another
+ *     restaurant that day).
+ *  3. If the declining shelter is the only approved shelter, there's
+ *     nothing to reassign to — the assignment is left as-is so the
+ *     restaurant can retry the same shelter.
+ *
+ * @param {{ assignmentId: string }} params
+ * @returns {Promise<{ reassigned: boolean, newShelterId?: string, error?: unknown }>}
+ */
+export async function reassignAfterDecline({ assignmentId }) {
+  try {
+    const { data: assignmentRow, error: assignmentError } = await supabase
+      .from('assignments')
+      .select('id, shelter_id, assignment_date')
+      .eq('id', assignmentId)
+      .single()
+
+    if (assignmentError) throw assignmentError
+    if (!assignmentRow) return { reassigned: false }
+
+    const [
+      { data: shelters, error: sheltersError },
+      { data: todaysAssignments, error: todaysError },
+    ] = await Promise.all([
+      supabase
+        .from('shelters')
+        .select('id')
+        .ilike('status', 'approved')
+        .order('id', { ascending: true }),
+      supabase
+        .from('assignments')
+        .select('shelter_id')
+        .eq('assignment_date', assignmentRow.assignment_date)
+        .neq('id', assignmentRow.id),
+    ])
+
+    if (sheltersError) throw sheltersError
+    if (todaysError) throw todaysError
+
+    // Every approved shelter except the one that just declined.
+    const candidates = (shelters || []).filter(
+      (shelter) => shelter.id !== assignmentRow.shelter_id
+    )
+
+    if (candidates.length === 0) {
+      // No other approved shelter exists to reassign to.
+      return { reassigned: false }
+    }
+
+    const busyShelterIds = new Set(
+      (todaysAssignments || []).map((row) => row.shelter_id)
+    )
+
+    const freeCandidates = candidates.filter(
+      (shelter) => !busyShelterIds.has(shelter.id)
+    )
+
+    const newShelter = (freeCandidates.length > 0 ? freeCandidates : candidates)[0]
+
+    const { error: updateError } = await supabase
+      .from('assignments')
+      .update({ shelter_id: newShelter.id })
+      .eq('id', assignmentRow.id)
+
+    if (updateError) throw updateError
+
+    return { reassigned: true, newShelterId: newShelter.id }
+  } catch (err) {
+    console.error('Reassignment after decline failed:', err)
+    return { reassigned: false, error: err }
+  }
+}

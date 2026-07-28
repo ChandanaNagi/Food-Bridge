@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { reassignAfterDecline } from '../lib/rotation'
 
 const DECLINE_REASONS = [
   'At capacity — cannot receive more food',
@@ -174,7 +175,10 @@ export default function DonationDetail() {
 
       if (error) throw error
 
-      await updateAssignmentStatus('reassigning')
+      if (donation?.assignment_id) {
+        const result = await reassignAfterDecline({ assignmentId: donation.assignment_id })
+        await updateAssignmentStatus(result.reassigned ? 'pending' : 'reassigning')
+      }
 
       setDonation((current) => ({
         ...current,

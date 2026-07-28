@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { ensureTodaysRotation } from '../lib/rotation'
+import { ensureTodaysRotation, reassignAfterDecline } from '../lib/rotation'
 import logo from "../assets/logo.png";
 
 const DECLINE_REASONS = [
@@ -223,6 +223,11 @@ export default function ShelterDashboard() {
         .eq('id', activeDonation.id)
 
       if (updateError) throw updateError
+
+      if (status === 'declined' && activeDonation.assignment_id) {
+        await reassignAfterDecline({ assignmentId: activeDonation.assignment_id })
+      }
+
       await loadDashboard()
     } catch (err) {
       console.error('Donation response error:', err)

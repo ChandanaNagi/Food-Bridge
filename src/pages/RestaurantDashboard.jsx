@@ -110,7 +110,7 @@ export default function RestaurantDashboard() {
       if (assign) {
         const { data: donationRows, error: donationError } = await supabase
           .from('donations')
-          .select('*')
+          .select('*, shelters(name)')
           .eq('assignment_id', assign.id)
           .order('posted_at', { ascending: false })
           .limit(1)
@@ -1148,7 +1148,7 @@ function DeclinedCard({ assignment, donation, onPost }) {
         </div>
 
         <div style={styles.declinedText}>
-          {assignment?.shelters?.name || 'The assigned shelter'} declined
+          {donation.shelters?.name || assignment?.shelters?.name || 'The assigned shelter'} declined
           the previous listing
           {donation.decline_reason
             ? ` because: ${donation.decline_reason}`
