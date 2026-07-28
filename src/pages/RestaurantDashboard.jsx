@@ -1453,6 +1453,8 @@ function ActiveDonationsSection({
 }
 
 function ScheduleSection({ assignments }) {
+  const [selectedItem, setSelectedItem] = useState(null)
+
   return (
     <div>
       <div style={styles.sectionToolbar}>
@@ -1524,7 +1526,11 @@ function ScheduleSection({ assignments }) {
                     Scheduled
                   </span>
 
-                  <button style={styles.linkButton}>
+                  <button
+                    type="button"
+                    style={styles.linkButton}
+                    onClick={() => setSelectedItem(item)}
+                  >
                     View details
                   </button>
                 </div>
@@ -1533,6 +1539,93 @@ function ScheduleSection({ assignments }) {
           </div>
         )}
       </div>
+
+      {selectedItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(19, 40, 31, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            zIndex: 1000,
+          }}
+          onMouseDown={() => setSelectedItem(null)}
+        >
+          <div
+            style={{
+              width: 'min(440px, 100%)',
+              background: '#FFFFFF',
+              borderRadius: 17,
+              padding: 24,
+              boxShadow: '0 20px 60px rgba(0,0,0,.24)',
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <h2 style={{ margin: 0, fontSize: 18, color: '#213A2B' }}>
+                {formatFullDate(selectedItem.assignment_date)}
+              </h2>
+
+              {isToday(selectedItem.assignment_date) && (
+                <span style={styles.todayBadge}>Today</span>
+              )}
+            </div>
+
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#748077' }}>
+              Rotation assignment details
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+              <div style={styles.rotationAvatar}>
+                {getInitials(selectedItem.shelters?.name)}
+              </div>
+
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#213A2B' }}>
+                  {selectedItem.shelters?.name || 'Shelter assignment'}
+                </div>
+                <div style={{ fontSize: 13, color: '#748077', marginTop: 2 }}>
+                  {selectedItem.shelters?.address || 'Detroit, Michigan'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#748077' }}>Phone</span>
+                <span style={{ color: '#213A2B', fontWeight: 600 }}>
+                  {selectedItem.shelters?.phone || 'Not provided'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#748077' }}>Email</span>
+                <span style={{ color: '#213A2B', fontWeight: 600 }}>
+                  {selectedItem.shelters?.email || 'Not provided'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#748077' }}>Status</span>
+                <span style={styles.scheduledBadge}>Scheduled</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedItem(null)}
+                style={styles.secondaryButton}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
