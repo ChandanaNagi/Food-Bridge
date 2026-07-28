@@ -2858,6 +2858,8 @@ function isToday(value) {
 const styles = {
   app: {
     minHeight: '100vh',
+    maxWidth: '100vw',
+    overflowX: 'hidden',
     background: '#F3F6F4',
     fontFamily:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
