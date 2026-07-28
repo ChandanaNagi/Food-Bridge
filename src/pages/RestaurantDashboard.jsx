@@ -1064,10 +1064,7 @@ function DonationDetailsCard({ donation, now }) {
           value={donation.pickup_window || 'To be confirmed'}
         />
 
-        <DetailBox
-          label="Prepared"
-          value={donation.prepared_time || 'Not provided'}
-        />
+        
 
         <DetailBox
           label="Safe until"

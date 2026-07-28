@@ -256,7 +256,7 @@ export default function DonationDetail() {
             <SectionTitle icon="🍱" title="Food information" />
             <DetailRow label="Food items" value={donation.food_items} />
             <DetailRow label="Quantity" value={donation.quantity ? `${donation.quantity} portions` : 'Not specified'} />
-            <DetailRow label="Prepared time" value={donation.prepared_time || 'Not specified'} />
+            
             <DetailRow label="Safe until" value={donation.safe_until || 'Not specified'} />
             <DetailRow label="Temperature" value={donation.temperature_requirement || 'Not specified'} />
             <DetailRow label="Allergens" value={donation.allergen_notes || 'None noted'} last />

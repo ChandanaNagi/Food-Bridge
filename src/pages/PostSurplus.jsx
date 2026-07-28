@@ -9,7 +9,7 @@ export default function PostSurplus() {
     food_items: '',
     quantity: '',
     pickup_window: '',
-    prepared_time: '',
+    
     safe_until: '',
     temperature_requirement: '',
     allergen_notes: '',
@@ -164,7 +164,6 @@ export default function PostSurplus() {
         food_items: form.food_items.trim(),
         quantity: Number.parseInt(form.quantity, 10),
         pickup_window: form.pickup_window.trim(),
-        prepared_time: form.prepared_time.trim() || null,
         safe_until: form.safe_until.trim() || null,
         temperature_requirement:
           form.temperature_requirement.trim() || null,
@@ -210,7 +209,6 @@ if (notificationError) {
         food_items: '',
         quantity: '',
         pickup_window: '',
-        prepared_time: '',
         safe_until: '',
         temperature_requirement: '',
         allergen_notes: '',
@@ -310,13 +308,7 @@ if (notificationError) {
           disabled={!assignment || submitting}
         />
 
-        <Field
-          label="Prepared time"
-          value={form.prepared_time}
-          onChange={setField('prepared_time')}
-          placeholder="e.g. 3:30 PM"
-          disabled={!assignment || submitting}
-        />
+        
 
         <Field
           label="Safe until (expiration)"
